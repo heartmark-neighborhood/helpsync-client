@@ -7,11 +7,16 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.helpsync.nickname_setting.NicknameSetting
+import com.example.helpsync.request_acceptance_screen.RequestAcceptanceScreen
 import com.example.helpsync.ui.theme.HelpSyncTheme
+import com.example.helpsync.support_details_confirmation_screen.SupportRequestDetailScreen
+import androidx.compose.runtime.*
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,29 +24,62 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             HelpSyncTheme {
+                val navController = rememberNavController()
+                var nickname by remember { mutableStateOf("") }
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
+                    NavHost(
+                        navController = navController,
+                        startDestination = AppScreen.NicknameSetting.name,
                         modifier = Modifier.padding(innerPadding)
-                    )
+                    ) {
+                        // ニックネーム設定画面
+                        composable(AppScreen.NicknameSetting.name) {
+                            NicknameSetting(
+                                nickname = nickname,
+                                onNicknameChange = { nickname = it },
+                                onBackClick = { finish() },
+                                onDoneClick = {
+                                    navController.navigate(AppScreen.SupporterHome.name) {
+                                        popUpTo(AppScreen.NicknameSetting.name) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        // サポーターホーム画面
+                        composable(AppScreen.SupporterHome.name) {
+                            MainScreen(
+                                navController = navController,
+                                nickname = nickname,
+                                onNicknameChange = { nickname = it }
+                            )
+                        }
+
+                        // 支援受諾確認画面
+                        composable(AppScreen.RequestAcceptanceScreen.name) {
+                            RequestAcceptanceScreen(
+                                navController = navController,
+                                onDoneClick = {
+                                    navController.navigate(AppScreen.SupporterHome.name) {
+                                        popUpTo(AppScreen.RequestAcceptanceScreen.name) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        // 支援詳細確認画面
+                        composable(AppScreen.RequestDetail.name) {
+                            SupportRequestDetailScreen(
+                                onDoneClick = {
+                                    navController.navigate(AppScreen.SupporterHome.name){
+                                        popUpTo(AppScreen.RequestDetail.name){inclusive = true}
+                                    }
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    HelpSyncTheme {
-        Greeting("Android")
     }
 }
