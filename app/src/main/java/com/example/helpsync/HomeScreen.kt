@@ -10,8 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
-import com.example.helpsync.supotter_home_screen.SupporterHomeScreen
-import com.example.helpsync.supotter_setting_screen.SupporterSettingsScreen
+import com.example.helpsync.supporter_home_screen.SupporterHomeScreen
+import com.example.helpsync.supporter_setting_screen.SupporterSettingsScreen
 
 enum class MainScreenTab(
     val icon: ImageVector,
