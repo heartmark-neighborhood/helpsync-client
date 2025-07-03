@@ -17,6 +17,7 @@ import com.example.helpsync.ui.theme.HelpSyncTheme
 import com.example.helpsync.support_details_confirmation_screen.SupportRequestDetailScreen
 import com.example.helpsync.role_selection_screen.RoleSelectionScreen
 import com.example.helpsync.role_selection_screen.RoleType
+import com.example.helpsync.help_mark_holder_home_screen.HelpMarkHolderHomeScreen
 import androidx.compose.runtime.*
 
 
@@ -35,20 +36,18 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         // 役割選択画面
-                        composable(AppScreen.RoleSelection.name) {
-                            RoleSelectionScreen(
-                                onRoleSelected = { roleType ->
-                                    when (roleType) {
-                                        RoleType.SUPPORTER -> {
-                                            navController.navigate(AppScreen.NicknameSetting.name)
-                                        }
-                                        RoleType.HELP_MARK_HOLDER -> {
-                                            // TODO: ヘルプマーク所持者用の画面に遷移
-                                            // navController.navigate(AppScreen.HelpMarkHolderHome.name)
-                                        }
+                        composable(AppScreen.RoleSelection.name) {                        RoleSelectionScreen(
+                            onRoleSelected = { roleType ->
+                                when (roleType) {
+                                    RoleType.SUPPORTER -> {
+                                        navController.navigate(AppScreen.NicknameSetting.name)
+                                    }
+                                    RoleType.HELP_MARK_HOLDER -> {
+                                        navController.navigate(AppScreen.HelpMarkHolderHome.name)
                                     }
                                 }
-                            )
+                            }
+                        )
                         }
                         
                         // ニックネーム設定画面
@@ -101,12 +100,14 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // TODO: ヘルプマーク所持者用ホーム画面
-                        /*
+                        // ヘルプマーク所持者ホーム画面
                         composable(AppScreen.HelpMarkHolderHome.name) {
-                            // HelpMarkHolderHomeScreen()
+                            HelpMarkHolderHomeScreen(
+                                onMatchingClick = {
+                                    // TODO: マッチング後の画面遷移
+                                }
+                            )
                         }
-                        */
                     }
                 }
             }
