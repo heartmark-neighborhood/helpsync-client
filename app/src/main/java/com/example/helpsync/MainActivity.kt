@@ -15,6 +15,8 @@ import com.example.helpsync.nickname_setting.NicknameSetting
 import com.example.helpsync.request_acceptance_screen.RequestAcceptanceScreen
 import com.example.helpsync.ui.theme.HelpSyncTheme
 import com.example.helpsync.support_details_confirmation_screen.SupportRequestDetailScreen
+import com.example.helpsync.role_selection_screen.RoleSelectionScreen
+import com.example.helpsync.role_selection_screen.RoleType
 import androidx.compose.runtime.*
 
 
@@ -29,15 +31,36 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = AppScreen.NicknameSetting.name,
+                        startDestination = AppScreen.RoleSelection.name,
                         modifier = Modifier.padding(innerPadding)
                     ) {
+                        // 役割選択画面
+                        composable(AppScreen.RoleSelection.name) {
+                            RoleSelectionScreen(
+                                onRoleSelected = { roleType ->
+                                    when (roleType) {
+                                        RoleType.SUPPORTER -> {
+                                            navController.navigate(AppScreen.NicknameSetting.name)
+                                        }
+                                        RoleType.HELP_MARK_HOLDER -> {
+                                            // TODO: ヘルプマーク所持者用の画面に遷移
+                                            // navController.navigate(AppScreen.HelpMarkHolderHome.name)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                        
                         // ニックネーム設定画面
                         composable(AppScreen.NicknameSetting.name) {
                             NicknameSetting(
                                 nickname = nickname,
                                 onNicknameChange = { nickname = it },
-                                onBackClick = { finish() },
+                                onBackClick = { 
+                                    navController.navigate(AppScreen.RoleSelection.name) {
+                                        popUpTo(AppScreen.NicknameSetting.name) { inclusive = true }
+                                    }
+                                },
                                 onDoneClick = {
                                     navController.navigate(AppScreen.SupporterHome.name) {
                                         popUpTo(AppScreen.NicknameSetting.name) { inclusive = true }
@@ -77,6 +100,13 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+
+                        // TODO: ヘルプマーク所持者用ホーム画面
+                        /*
+                        composable(AppScreen.HelpMarkHolderHome.name) {
+                            // HelpMarkHolderHomeScreen()
+                        }
+                        */
                     }
                 }
             }
