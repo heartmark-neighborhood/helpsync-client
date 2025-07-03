@@ -1,4 +1,4 @@
-package com.example.helpsync.supotter_home_screen
+package com.example.helpsync.supporter_home_screen
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
