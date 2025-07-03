@@ -51,7 +51,7 @@ fun RoleSelectionScreen(
             icon = {
                 Icon(
                     Icons.Default.Person,
-                    contentDescription = "サポーター",
+                    contentDescription = stringResource(R.string.supporter_description),
                     modifier = Modifier.size(64.dp),
                     tint = Color(0xFF4CAF50)
                 )
