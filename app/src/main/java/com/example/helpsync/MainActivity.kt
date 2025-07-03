@@ -18,6 +18,10 @@ import com.example.helpsync.support_details_confirmation_screen.SupportRequestDe
 import com.example.helpsync.role_selection_screen.RoleSelectionScreen
 import com.example.helpsync.role_selection_screen.RoleType
 import com.example.helpsync.help_mark_holder_home_screen.HelpMarkHolderHomeScreen
+import com.example.helpsync.help_mark_holder_profile_screen.HelpMarkHolderProfileScreen
+import com.example.helpsync.help_mark_holder_matching_screen.HelpMarkHolderMatchingScreen
+import com.example.helpsync.help_mark_holder_matching_complete_screen.HelpMarkHolderMatchingCompleteScreen
+import com.example.helpsync.settings_screen.SettingsScreen
 import androidx.compose.runtime.*
 
 
@@ -104,7 +108,66 @@ class MainActivity : ComponentActivity() {
                         composable(AppScreen.HelpMarkHolderHome.name) {
                             HelpMarkHolderHomeScreen(
                                 onMatchingClick = {
-                                    // TODO: マッチング後の画面遷移
+                                    navController.navigate(AppScreen.HelpMarkHolderProfile.name)
+                                },
+                                onHomeClick = {
+                                    // 既にホーム画面なので何もしない、または画面をリフレッシュ
+                                },
+                                onSettingsClick = {
+                                    navController.navigate(AppScreen.Settings.name)
+                                }
+                            )
+                        }
+
+                        // ヘルプマーク所持者プロフィール入力画面
+                        composable(AppScreen.HelpMarkHolderProfile.name) {
+                            HelpMarkHolderProfileScreen(
+                                onBackClick = {
+                                    navController.popBackStack()
+                                },
+                                onCompleteClick = {
+                                    navController.navigate(AppScreen.HelpMarkHolderMatching.name) {
+                                        popUpTo(AppScreen.HelpMarkHolderProfile.name) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        // ヘルプマーク所持者マッチング画面
+                        composable(AppScreen.HelpMarkHolderMatching.name) {
+                            HelpMarkHolderMatchingScreen(
+                                onMatchingComplete = {
+                                    navController.navigate(AppScreen.HelpMarkHolderMatchingComplete.name) {
+                                        popUpTo(AppScreen.HelpMarkHolderMatching.name) { inclusive = true }
+                                    }
+                                },
+                                onCancel = {
+                                    navController.navigate(AppScreen.HelpMarkHolderHome.name) {
+                                        popUpTo(AppScreen.HelpMarkHolderMatching.name) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        // ヘルプマーク所持者マッチング完了画面
+                        composable(AppScreen.HelpMarkHolderMatchingComplete.name) {
+                            HelpMarkHolderMatchingCompleteScreen(
+                                onChatClick = {
+                                    // TODO: チャット画面に遷移
+                                },
+                                onHomeClick = {
+                                    navController.navigate(AppScreen.HelpMarkHolderHome.name) {
+                                        popUpTo(AppScreen.HelpMarkHolderMatchingComplete.name) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        // 設定画面
+                        composable(AppScreen.Settings.name) {
+                            SettingsScreen(
+                                onBackClick = {
+                                    navController.popBackStack()
                                 }
                             )
                         }
