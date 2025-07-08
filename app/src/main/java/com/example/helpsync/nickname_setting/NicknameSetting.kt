@@ -1,6 +1,6 @@
 package com.example.helpsync.nickname_setting
 
-import android.net.Uri // 一応残しておきますが、ダミーとして使います
+import android.net.Uri
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,40 +10,26 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
-// import androidx.compose.material.icons.filled.PhotoCamera // 不要になるのでコメントアウト
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-// import androidx.compose.ui.platform.LocalContext // imagePickerLauncher を使わないので不要
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-// import androidx.activity.compose.rememberLauncherForActivityResult // 不要
-// import androidx.activity.result.contract.ActivityResultContracts // 不要
 
 @Composable
 fun NicknameSetting(
     nickname: String,
     onNicknameChange: (String) -> Unit,
+    photoUri: Uri?,
+    onPhotoChange: (Uri?) -> Unit,
     onBackClick: () -> Unit = {},
     onDoneClick: () -> Unit = {}
 ) {
-    var hasPhoto by remember { mutableStateOf(false) }
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) } // ダミーとして保持
-    // val context = LocalContext.current // 不要
-
-    // val imagePickerLauncher = // 一時的にコメントアウト
-    //     rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-    //         if (uri != null) {
-    //             selectedImageUri = uri
-    //             hasPhoto = true
-    //         }
-    //     }
+    val hasPhoto = photoUri != null
 
     Column(
         modifier = Modifier
@@ -61,7 +47,6 @@ fun NicknameSetting(
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        // 顔写真を追加セクション
         Text(
             text = "顔写真を追加",
             style = MaterialTheme.typography.titleMedium,
@@ -71,52 +56,28 @@ fun NicknameSetting(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 写真表示カード (タップで hasPhoto = true にする)
         Card(
             onClick = {
-                // imagePickerLauncher.launch("image/*") // コメントアウト
-                hasPhoto = true // タップしたら写真があるとみなす
-                selectedImageUri = Uri.EMPTY // ダミーのUriを設定 (nullでも可)
+                onPhotoChange(Uri.EMPTY)
             },
             modifier = Modifier
                 .size(120.dp)
                 .align(Alignment.CenterHorizontally)
-                .border(
-                    2.dp,
-                    if (hasPhoto) Color(0xFF4CAF50) else Color(0xFFE0E0E0), // hasPhotoに応じて枠線色変更
-                    CircleShape
-                ),
+                .border(2.dp, if (hasPhoto) Color(0xFF4CAF50) else Color(0xFFE0E0E0), CircleShape),
             shape = CircleShape,
             colors = CardDefaults.cardColors(
-                containerColor = if (hasPhoto) Color(0xFFE8F5E8) else Color(0xFFF5F5F5) // hasPhotoに応じて背景色変更
+                containerColor = if (hasPhoto) Color(0xFFE8F5E8) else Color(0xFFF5F5F5)
             )
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                // 常に写真アイコンを表示 (hasPhoto が true になった場合)
-                // もし初期状態でカメラアイコンを表示したい場合は、この if 文は残してください
-                // 今回は「タップしたら完了になるように」なので、タップ後の状態をデフォルトで表示するイメージ
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = Icons.Default.Person, // 常に人物アイコン
+                    imageVector = Icons.Default.Person,
                     contentDescription = "顔写真",
                     modifier = Modifier.size(60.dp),
-                    tint = if (hasPhoto) Color(0xFF4CAF50) else Color(0xFF757575) // hasPhotoに応じて色変更
+                    tint = if (hasPhoto) Color(0xFF4CAF50) else Color(0xFF757575)
                 )
-                // 以下の Column は、hasPhoto が false の場合の表示なので、
-                // タップしたら常に hasPhoto = true になる今回の変更では、
-                // 初期表示以外では見えなくなります。初期表示でカメラアイコンが不要なら削除してもOKです。
                 if (!hasPhoto) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Icon( // PhotoCamera アイコンは Person アイコンで代替するためコメントアウトしても良い
-                        //     imageVector = Icons.Filled.PhotoCamera,
-                        //     contentDescription = "カメラ",
-                        //     modifier = Modifier.size(40.dp),
-                        //     tint = Color(0xFF757575)
-                        // )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "タップして\n写真を追加",
@@ -141,7 +102,6 @@ fun NicknameSetting(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // ニックネーム入力
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Filled.Person,
@@ -166,10 +126,9 @@ fun NicknameSetting(
 
         Spacer(modifier = Modifier.height(48.dp))
 
-        // 完了ボタン
         Button(
             onClick = onDoneClick,
-            enabled = hasPhoto && nickname.isNotBlank(), // hasPhoto が true になれば有効になる
+            enabled = hasPhoto && nickname.isNotBlank(),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),

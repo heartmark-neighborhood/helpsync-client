@@ -32,7 +32,7 @@ fun SupporterHomeScreen(
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(dummyRequests) { request ->
                 Card(
-                    onClick = { onDoneClick() }, // ← カードタップで遷移
+                    onClick = { onDoneClick() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)

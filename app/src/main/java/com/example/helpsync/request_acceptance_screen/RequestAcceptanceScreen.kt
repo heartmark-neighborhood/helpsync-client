@@ -24,13 +24,13 @@ fun RequestAcceptanceScreen(
     navController: NavController,
     onDoneClick: () -> Unit = {}
 ) {
-    var timeLeft by remember { mutableIntStateOf(60) }
+    var time by remember { mutableIntStateOf(60) }
 
     // タイマー処理：0秒になったらホームへ戻る
     LaunchedEffect(Unit) {
-        while (timeLeft > 0) {
+        while (time > 0) {
             delay(1000)
-            timeLeft--
+            time--
         }
         navController.navigate(AppScreen.SupporterHome.name) {
             popUpTo(AppScreen.RequestAcceptanceScreen.name) { inclusive = true }
@@ -88,7 +88,7 @@ fun RequestAcceptanceScreen(
                         Text("承認残り時間", fontSize = 14.sp, color = Color.Gray)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "${timeLeft}秒",
+                            text = "${time}秒",
                             fontSize = 28.sp,
                             color = Color(0xFF1976D2)
                         )
