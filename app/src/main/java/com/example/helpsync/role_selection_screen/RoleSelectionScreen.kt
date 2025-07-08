@@ -34,7 +34,6 @@ fun RoleSelectionScreen(
         verticalArrangement = Arrangement.spacedBy(32.dp)
     ) {
         Spacer(modifier = Modifier.height(40.dp))
-        
         // タイトル
         Text(
             text = "あなたの役割を\n選択してください",
