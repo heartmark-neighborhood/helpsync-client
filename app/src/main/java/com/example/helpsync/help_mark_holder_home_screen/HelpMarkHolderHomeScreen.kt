@@ -156,16 +156,7 @@ fun HelpMarkHolderHomeScreen(
         
         Spacer(modifier = Modifier.height(32.dp))
         
-        // 状態切り替えボタン（デモ用）
-        OutlinedButton(
-            onClick = { isNearSupporter = !isNearSupporter },
-            modifier = Modifier.padding(horizontal = 24.dp)
-        ) {
-            Text(
-                text = if (isNearSupporter) "支援者なし状態にする" else "支援者あり状態にする",
-                fontSize = 14.sp
-            )
-        }
+        
         
         Spacer(modifier = Modifier.weight(1f))
         
@@ -184,7 +175,7 @@ fun HelpMarkHolderHomeScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth(),
-            containerColor = Color(0xFF6200EE),
+            containerColor = Color(0x808080),
             contentColor = Color.White
         ) {
             Row(

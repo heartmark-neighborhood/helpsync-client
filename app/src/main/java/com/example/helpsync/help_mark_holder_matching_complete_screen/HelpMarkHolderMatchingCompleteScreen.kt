@@ -156,24 +156,7 @@ fun HelpMarkHolderMatchingCompleteScreen(
         
         Spacer(modifier = Modifier.height(32.dp))
         
-        // チャットボタン
-        Button(
-            onClick = onChatClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(28.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF4CAF50)
-            )
-        ) {
-            Text(
-                text = "支援者とチャット",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
+        
         
         Spacer(modifier = Modifier.height(16.dp))
         
@@ -197,13 +180,6 @@ fun HelpMarkHolderMatchingCompleteScreen(
         
         Spacer(modifier = Modifier.weight(1f))
         
-        // 注意事項
-        Text(
-            text = "支援者との待ち合わせ場所や時間について\nチャットで相談してください",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF757575),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        
     }
 }

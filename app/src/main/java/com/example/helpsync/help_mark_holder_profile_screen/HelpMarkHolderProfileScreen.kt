@@ -28,6 +28,7 @@ fun HelpMarkHolderProfileScreen(
     onBackClick: () -> Unit = {},
     onCompleteClick: () -> Unit = {}
 ) {
+    var nickname by remember { mutableStateOf("") }
     var supportContent by remember { mutableStateOf("") }
     var hasPhoto by remember { mutableStateOf(false) }
     
@@ -62,6 +63,36 @@ fun HelpMarkHolderProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(24.dp))
+            
+            // ニックネーム入力セクション
+            Text(
+                text = "ニックネーム",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            OutlinedTextField(
+                value = nickname,
+                onValueChange = { nickname = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { 
+                    Text(
+                        text = "あなたのニックネームを入力してください",
+                        color = Color(0xFF757575)
+                    )
+                },
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF6200EE),
+                    unfocusedBorderColor = Color(0xFFE0E0E0)
+                ),
+                singleLine = true
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
             
             // 顔写真セクション
             Text(
@@ -129,6 +160,14 @@ fun HelpMarkHolderProfileScreen(
                 color = Color(0xFF757575),
                 textAlign = TextAlign.Center
             )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            
             
             Spacer(modifier = Modifier.height(32.dp))
             
