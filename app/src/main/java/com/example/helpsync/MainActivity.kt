@@ -40,18 +40,19 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         // 役割選択画面
-                        composable(AppScreen.RoleSelection.name) {                        RoleSelectionScreen(
-                            onRoleSelected = { roleType ->
-                                when (roleType) {
-                                    RoleType.SUPPORTER -> {
-                                        navController.navigate(AppScreen.NicknameSetting.name)
-                                    }
-                                    RoleType.HELP_MARK_HOLDER -> {
-                                        navController.navigate(AppScreen.HelpMarkHolderHome.name)
+                        composable(AppScreen.RoleSelection.name) {                       
+                            RoleSelectionScreen(
+                                onRoleSelected = { roleType ->
+                                    when (roleType) {
+                                        RoleType.SUPPORTER -> {
+                                            navController.navigate(AppScreen.NicknameSetting.name)
+                                        }
+                                        RoleType.HELP_MARK_HOLDER -> {
+                                            navController.navigate(AppScreen.HelpMarkHolderHome.name)
+                                        }
                                     }
                                 }
-                            }
-                        )
+                            )
                         }
                         
                         // ニックネーム設定画面
