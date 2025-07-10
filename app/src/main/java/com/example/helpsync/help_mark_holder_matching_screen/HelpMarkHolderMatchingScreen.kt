@@ -60,6 +60,7 @@ fun HelpMarkHolderMatchingScreen(
             if (timeRemaining > 0) {
                 // マッチング成功
                 onMatchingComplete()
+                isMatching = false
             }
         }
     }
