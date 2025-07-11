@@ -12,6 +12,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.example.helpsync.supporter_home_screen.SupporterHomeScreen
 import com.example.helpsync.supporter_setting_screen.SupporterSettingsScreen
+import android.net.Uri
 
 enum class MainScreenTab(
     val icon: ImageVector,
@@ -26,7 +27,9 @@ enum class MainScreenTab(
 fun MainScreen(
     navController: NavHostController,
     nickname: String,
-    onNicknameChange: (String) -> Unit
+    onNicknameChange: (String) -> Unit,
+    photoUri: Uri?,
+    onPhotoChange: (Uri?) -> Unit
 ) {
     val tabNavController = rememberNavController()
     val currentDestination by tabNavController.currentBackStackEntryAsState()
@@ -68,7 +71,9 @@ fun MainScreen(
             composable(MainScreenTab.Settings.route) {
                 SupporterSettingsScreen(
                     nickname = nickname,
-                    onNicknameChange = onNicknameChange
+                    onNicknameChange = onNicknameChange,
+                    photoUri = photoUri,
+                    onPhotoChange = onPhotoChange
                 )
             }
         }

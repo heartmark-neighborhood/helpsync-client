@@ -1,6 +1,9 @@
 package com.example.helpsync.supporter_setting_screen
 
+import android.net.Uri
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
@@ -11,11 +14,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+
 @Composable
 fun SupporterSettingsScreen(
     nickname: String,
     onNicknameChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    photoUri: Uri?,
+    onPhotoChange: (Uri?) -> Unit,
+    modifier: Modifier = Modifier,
+    onEditClick: () -> Unit = {}
 ) {
     var notificationsEnabled by remember { mutableStateOf(true) }
 
@@ -23,9 +30,41 @@ fun SupporterSettingsScreen(
         modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.Start
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "顔写真",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        Card(
+            onClick = { onPhotoChange(Uri.EMPTY) },
+            shape = CircleShape,
+            modifier = Modifier
+                .size(120.dp)
+                .border(
+                    2.dp,
+                    Color(0xFF4CAF50),
+                    CircleShape
+                ),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E8))
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "顔写真",
+                    modifier = Modifier.size(60.dp),
+                    tint = Color(0xFF4CAF50)
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -47,16 +86,14 @@ fun SupporterSettingsScreen(
             value = nickname,
             onValueChange = onNicknameChange,
             placeholder = { Text("ニックネームを入力") },
-            singleLine = true,
-            maxLines = 1,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp)
+            modifier = Modifier.fillMaxWidth()
         )
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(bottom = 24.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text("通知を受け取る", fontSize = 14.sp)
             Spacer(modifier = Modifier.width(16.dp))
@@ -66,13 +103,15 @@ fun SupporterSettingsScreen(
             )
         }
 
+        Spacer(modifier = Modifier.height(24.dp))
+
         Button(
-            onClick = { /* 保存処理 */ },
+            onClick = onEditClick,
             modifier = Modifier.align(Alignment.End),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
             enabled = nickname.isNotBlank()
         ) {
-            Text("保存")
+            Text("編集")
         }
     }
 }

@@ -32,7 +32,7 @@ fun SupporterHomeScreen(
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(dummyRequests) { request ->
                 Card(
-                    onClick = { onDoneClick() }, // ← カードタップで遷移
+                    onClick = { onDoneClick() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
@@ -47,22 +47,5 @@ fun SupporterHomeScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-
-        Text("マップ（仮表示）", style = MaterialTheme.typography.titleMedium)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(300.dp)
-                .padding(top = 8.dp)
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-            ) {
-                Box(Modifier.padding(16.dp)) {
-                    Text("ここに地図が表示されます")
-                }
-            }
-        }
     }
 }
