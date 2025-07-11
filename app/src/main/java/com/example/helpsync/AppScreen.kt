@@ -6,6 +6,9 @@ enum class AppScreen {
     SupporterHome,
     RequestAcceptanceScreen,
     RequestDetail,
-    // TODO: ヘルプマーク所持者用の画面を追加
-    HelpMarkHolderHome
+    HelpMarkHolderHome,
+    HelpMarkHolderProfile,
+    HelpMarkHolderMatching,
+    HelpMarkHolderMatchingComplete,
+    Settings
 }

@@ -4,4 +4,5 @@
     <string name="supporter">サポーター</string>
     <string name="help_mark_holder">ヘルプマーク所持者</string>
     <string name="supporter_description">サポーターとして登録</string>
+    <string name="help_mark_holder_description">支援を必要とする方</string>
 </resources>
