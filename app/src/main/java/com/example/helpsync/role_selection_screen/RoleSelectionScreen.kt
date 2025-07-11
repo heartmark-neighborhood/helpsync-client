@@ -34,8 +34,6 @@ fun RoleSelectionScreen(
         verticalArrangement = Arrangement.spacedBy(32.dp)
     ) {
         Spacer(modifier = Modifier.height(40.dp))
-        
-        // タイトル
         Text(
             text = "あなたの役割を\n選択してください",
             fontSize = 24.sp,
@@ -44,8 +42,7 @@ fun RoleSelectionScreen(
             lineHeight = 32.sp,
             color = Color(0xFF1976D2)
         )
-        
-        // サポーターカード
+
         ImprovedRoleCard(
             title = stringResource(R.string.supporter),
             icon = {
@@ -58,22 +55,19 @@ fun RoleSelectionScreen(
             },
             onClick = { onRoleSelected(RoleType.SUPPORTER) }
         )
-        
-        // ヘルプマーク所持者カード
+
         ImprovedRoleCard(
             title = stringResource(R.string.help_mark_holder),
             icon = {
                 Box(
                     contentAlignment = Alignment.Center
                 ) {
-                    // ピンクのハート
                     Icon(
                         Icons.Default.Favorite,
                         contentDescription = "ハート",
                         modifier = Modifier.size(64.dp),
                         tint = Color(0xFFE91E63)
                     )
-                    // 白い十字
                     Icon(
                         Icons.Default.Add,
                         contentDescription = "十字",
@@ -115,7 +109,6 @@ private fun ImprovedRoleCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // アイコン背景
             Card(
                 modifier = Modifier.size(100.dp),
                 shape = RoundedCornerShape(50.dp),
