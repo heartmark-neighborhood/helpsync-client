@@ -24,7 +24,7 @@ import com.example.helpsync.help_mark_holder_profile_screen.HelpMarkHolderProfil
 import com.example.helpsync.help_mark_holder_matching_screen.HelpMarkHolderMatchingScreen
 import com.example.helpsync.help_mark_holder_matching_complete_screen.HelpMarkHolderMatchingCompleteScreen
 import com.example.helpsync.settings_screen.SettingsScreen
-import com.example.helpsync.support_content_input_screen.SupportContentInputScreen
+import com.example.helpsync.supporter_setting_screen.SupporterSettingsScreen
 import androidx.compose.runtime.saveable.rememberSaveable
 
 
@@ -197,15 +197,16 @@ class MainActivity : ComponentActivity() {
 
                         // 支援内容入力画面
                         composable(AppScreen.SupportContentInput.name) {
-                            SupportContentInputScreen(
+                            SupporterSettingsScreen(
+                                nickname = nickname,
+                                onNicknameChange = { newNickname -> nickname = newNickname },
+                                photoUri = photoUri,
+                                onPhotoChange = { newUri -> photoUri = newUri },
+                                onEditClick = {
+                                    navController.popBackStack()
+                                },
                                 onBackClick = {
                                     navController.popBackStack()
-                                },
-                                onSaveClick = {
-                                    navController.popBackStack()
-                                },
-                                onSettingsClick = {
-                                    navController.navigate(AppScreen.Settings.name)
                                 }
                             )
                         }
