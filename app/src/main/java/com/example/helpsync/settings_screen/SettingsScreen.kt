@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Security
@@ -31,36 +30,22 @@ fun SettingsScreen(
             .fillMaxSize()
             .background(Color(0xFFF5F5F5))
     ) {
-        // トップバー
-        TopAppBar(
-            title = {
-                Text(
-                    text = "設定",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            navigationIcon = {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "戻る"
-                    )
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color(0xFF6200EE),
-                titleContentColor = Color.White,
-                navigationIconContentColor = Color.White
-            )
-        )
-        
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // タイトル
+            Text(
+                text = "設定",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF212121),
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
             // プロフィール設定
             SettingsItem(
                 icon = Icons.Default.Person,
@@ -130,7 +115,7 @@ fun SettingsItem(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = Color(0xFF6200EE),
+                tint = Color(0xFF757575),
                 modifier = Modifier.size(24.dp)
             )
             

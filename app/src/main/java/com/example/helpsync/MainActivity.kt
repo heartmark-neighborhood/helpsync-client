@@ -24,7 +24,7 @@ import com.example.helpsync.help_mark_holder_profile_screen.HelpMarkHolderProfil
 import com.example.helpsync.help_mark_holder_matching_screen.HelpMarkHolderMatchingScreen
 import com.example.helpsync.help_mark_holder_matching_complete_screen.HelpMarkHolderMatchingCompleteScreen
 import com.example.helpsync.settings_screen.SettingsScreen
-import com.example.helpsync.supporter_setting_screen.SupporterSettingsScreen
+import com.example.helpsync.support_content_input_screen.SupporterSettingsScreen
 import androidx.compose.runtime.saveable.rememberSaveable
 
 

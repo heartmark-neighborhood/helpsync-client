@@ -121,23 +121,6 @@ fun HelpMarkHolderMatchingCompleteScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                Text(
-                    text = "やさしい人",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2196F3)
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = "約3分で到着予定",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF757575)
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly

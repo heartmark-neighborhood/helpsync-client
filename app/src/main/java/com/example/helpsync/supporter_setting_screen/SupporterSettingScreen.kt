@@ -111,7 +111,7 @@ fun SupporterSettingsScreen(
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
             enabled = nickname.isNotBlank()
         ) {
-            Text("編集")
+            Text("保存")
         }
     }
 }

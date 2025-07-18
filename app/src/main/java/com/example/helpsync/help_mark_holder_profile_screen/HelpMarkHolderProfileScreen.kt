@@ -86,7 +86,7 @@ fun HelpMarkHolderProfileScreen(
                 },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF6200EE),
+                    focusedBorderColor = Color(0xFF757575),
                     unfocusedBorderColor = Color(0xFFE0E0E0)
                 ),
                 singleLine = true
@@ -201,14 +201,6 @@ fun HelpMarkHolderProfileScreen(
                 )
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = "具体的に記入することで、適切な支援者とマッチングしやすくなります",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF757575),
-                modifier = Modifier.fillMaxWidth()
-            )
             
             Spacer(modifier = Modifier.height(48.dp))
             

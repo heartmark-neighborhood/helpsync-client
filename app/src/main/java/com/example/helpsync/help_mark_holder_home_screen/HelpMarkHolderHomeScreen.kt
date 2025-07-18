@@ -175,7 +175,7 @@ fun HelpMarkHolderHomeScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth(),
-            containerColor = Color(0xFF6200EE),
+            containerColor = Color(0xFF757575),
             contentColor = Color.White
         ) {
             Row(

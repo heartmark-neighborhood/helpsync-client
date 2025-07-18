@@ -1,4 +1,4 @@
-package com.example.helpsync.supporter_setting_screen
+package com.example.helpsync.support_content_input_screen
 
 import android.net.Uri
 import androidx.compose.foundation.border
@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -34,14 +35,30 @@ fun SupporterSettingsScreen(
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        IconButton(onClick = onBackClick) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "戻る"
-            )
+        // 戻るボタン
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "戻る",
+                    tint = Color(0xFF212121)
+                )
+            }
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // タイトル
+        Text(
+            text = "プロフィール設定",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF212121),
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
 
         Text(
             text = "顔写真",
