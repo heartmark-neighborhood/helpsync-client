@@ -67,7 +67,7 @@ fun SupporterSettingsScreen(
         )
 
         Card(
-            onClick = { onPhotoChange(Uri.EMPTY) },
+            onClick = { onPhotoChange(null) },
             shape = CircleShape,
             modifier = Modifier
                 .size(120.dp)
