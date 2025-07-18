@@ -1,6 +1,10 @@
 package com.example.helpsync
 
 enum class AppScreen {
+    SignIn,
+    SignUp,
+    Profile,
+    ProfileEdit,
     RoleSelection,
     NicknameSetting,
     SupporterHome,
