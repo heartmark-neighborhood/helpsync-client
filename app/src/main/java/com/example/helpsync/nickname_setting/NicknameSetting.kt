@@ -121,7 +121,8 @@ fun NicknameSetting(
             value = nickname,
             onValueChange = onNicknameChange,
             placeholder = { Text("ニックネームを入力") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
         Spacer(modifier = Modifier.height(48.dp))

@@ -86,7 +86,8 @@ fun SupporterSettingsScreen(
             value = nickname,
             onValueChange = onNicknameChange,
             placeholder = { Text("ニックネームを入力") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -111,7 +112,7 @@ fun SupporterSettingsScreen(
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
             enabled = nickname.isNotBlank()
         ) {
-            Text("編集")
+            Text("保存")
         }
     }
 }
