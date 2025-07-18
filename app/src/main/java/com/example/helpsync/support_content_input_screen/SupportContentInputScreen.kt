@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,7 +23,8 @@ fun SupporterSettingsScreen(
     photoUri: Uri?,
     onPhotoChange: (Uri?) -> Unit,
     modifier: Modifier = Modifier,
-    onEditClick: () -> Unit = {}
+    onEditClick: () -> Unit = {},
+    onBackClick: () -> Unit = {}
 ) {
     var notificationsEnabled by remember { mutableStateOf(true) }
 
@@ -32,6 +34,13 @@ fun SupporterSettingsScreen(
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        IconButton(onClick = onBackClick) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "戻る"
+            )
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
@@ -41,7 +50,7 @@ fun SupporterSettingsScreen(
         )
 
         Card(
-            onClick = { onPhotoChange(Uri.EMPTY) },
+            onClick = { onPhotoChange(null) },
             shape = CircleShape,
             modifier = Modifier
                 .size(120.dp)
@@ -86,8 +95,7 @@ fun SupporterSettingsScreen(
             value = nickname,
             onValueChange = onNicknameChange,
             placeholder = { Text("ニックネームを入力") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(24.dp))
