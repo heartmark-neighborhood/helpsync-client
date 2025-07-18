@@ -34,7 +34,6 @@ import com.example.helpsync.viewmodel.UserViewModel
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 
 
 
@@ -44,24 +43,18 @@ class MainActivity : ComponentActivity() {
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        
-        // Firebase初期化確認
-        try {
-            FirebaseApp.initializeApp(this)
-            Log.d(TAG, "✅ Firebase initialized successfully")
-            
-            // Firebase Auth確認
-            val auth = FirebaseAuth.getInstance()
-            Log.d(TAG, "✅ FirebaseAuth instance created")
-            
-            // 毎回ログインを求めるため、アプリ起動時にサインアウト
-            auth.signOut()
-            Log.d(TAG, "✅ Auto sign out on app startup")
-            
-            // Firestore確認
-            val firestore = FirebaseFirestore.getInstance()
-            Log.d(TAG, "✅ Firestore instance created")
+        super.onCreate(savedInstanceState)            // Firebase初期化確認
+            try {
+                FirebaseApp.initializeApp(this)
+                Log.d(TAG, "✅ Firebase initialized successfully")
+                
+                // Firebase Auth確認
+                val auth = FirebaseAuth.getInstance()
+                Log.d(TAG, "✅ FirebaseAuth instance created")
+                
+                // 毎回ログインを求めるため、アプリ起動時にサインアウト
+                auth.signOut()
+                Log.d(TAG, "✅ Auto sign out on app startup")
             
         } catch (e: Exception) {
             Log.e(TAG, "❌ Firebase initialization failed: ${e.message}", e)
@@ -75,6 +68,7 @@ class MainActivity : ComponentActivity() {
 
                 var nickname by rememberSaveable { mutableStateOf("") }
                 var photoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+                var selectedRole by rememberSaveable { mutableStateOf<String?>(null) }
 
                 // 認証状態を監視
                 val isSignedIn by remember { derivedStateOf { userViewModel.isSignedIn } }
@@ -153,15 +147,14 @@ class MainActivity : ComponentActivity() {
 
                             RoleSelectionScreen(
                                 onRoleSelected = { roleType ->
-                                    when (roleType) {
-                                        RoleType.SUPPORTER -> {
-                                            navController.navigate(AppScreen.NicknameSetting.name)
-                                        }
-                                        RoleType.HELP_MARK_HOLDER -> {
-                                            navController.navigate(AppScreen.HelpMarkHolderHome.name)
-
-                                        }
+                                    // 選択されたロールを一時保存（データベースには保存しない）
+                                    selectedRole = when (roleType) {
+                                        RoleType.SUPPORTER -> "supporter"
+                                        RoleType.HELP_MARK_HOLDER -> "requester"
                                     }
+                                    
+                                    // ニックネーム設定画面に遷移
+                                    navController.navigate(AppScreen.NicknameSetting.name)
                                 }
                             )
                         }
@@ -178,7 +171,22 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 onDoneClick = {
-                                    navController.navigate(AppScreen.SupporterHome.name) {
+                                    // ニックネームを保存
+                                    userViewModel.updateNickname(nickname)
+                                    
+                                    // 選択されたロールも保存
+                                    selectedRole?.let { role ->
+                                        userViewModel.updateRole(role)
+                                    }
+                                    
+                                    // ロールに応じたホーム画面に遷移
+                                    val nextScreen = when (selectedRole) {
+                                        "supporter" -> AppScreen.SupporterHome.name
+                                        "requester" -> AppScreen.HelpMarkHolderHome.name
+                                        else -> AppScreen.SupporterHome.name // デフォルト
+                                    }
+                                    
+                                    navController.navigate(nextScreen) {
                                         popUpTo(AppScreen.NicknameSetting.name) { inclusive = true }
                                     }
                                 }

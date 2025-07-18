@@ -101,7 +101,7 @@ fun ProfileScreen(
                         }
                     }
                     
-                    Divider()
+                    HorizontalDivider()
                     
                     // 役割表示
                     Column(
@@ -116,28 +116,26 @@ fun ProfileScreen(
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            user.roles.forEach { role ->
-                                val roleText = when (role) {
-                                    UserRole.SUPPORTER.value -> "サポーター"
-                                    UserRole.REQUESTER.value -> "要求者"
-                                    else -> role
-                                }
-                                
-                                AssistChip(
-                                    onClick = { },
-                                    label = { Text(roleText) },
-                                    colors = AssistChipDefaults.assistChipColors(
-                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                )
+                            val roleText = when (user.role) {
+                                UserRole.SUPPORTER.value -> "サポーター"
+                                UserRole.REQUESTER.value -> "要求者"
+                                else -> user.role
                             }
+                            
+                            AssistChip(
+                                onClick = { },
+                                label = { Text(roleText) },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            )
                         }
                     }
                     
                     // 身体的特徴
                     if (user.physicalFeatures.isNotBlank()) {
-                        Divider()
+                        HorizontalDivider()
                         
                         Column(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -193,7 +191,7 @@ fun ProfileScreen(
                         )
                         Text(
                             text = java.text.SimpleDateFormat("yyyy/MM/dd", java.util.Locale.getDefault())
-                                .format(java.util.Date(user.createdAt)),
+                                .format(user.createdAt),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -209,7 +207,7 @@ fun ProfileScreen(
                         )
                         Text(
                             text = java.text.SimpleDateFormat("yyyy/MM/dd", java.util.Locale.getDefault())
-                                .format(java.util.Date(user.updatedAt)),
+                                .format(user.updatedAt),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }

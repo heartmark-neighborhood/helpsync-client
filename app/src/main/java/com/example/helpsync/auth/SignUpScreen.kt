@@ -109,7 +109,7 @@ fun SignUpScreen(
                     email = email,
                     password = password,
                     nickname = "", // 初期値は空
-                    roles = emptyList(), // 初期値は空
+                    role = "", // 初期値は空
                     physicalFeatures = "" // 初期値は空
                 )
             },

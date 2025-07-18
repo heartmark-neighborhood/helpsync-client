@@ -10,6 +10,7 @@ import com.example.helpsync.data.User
 import com.example.helpsync.repository.UserRepository
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.launch
+import java.util.Date
 
 class UserViewModel : ViewModel() {
     private val userRepository = UserRepository()
@@ -59,7 +60,7 @@ class UserViewModel : ViewModel() {
         }
     }
 
-    fun signUp(email: String, password: String, nickname: String = "", roles: List<String> = emptyList(), physicalFeatures: String = "") {
+    fun signUp(email: String, password: String, nickname: String = "", role: String = "", physicalFeatures: String = "") {
         viewModelScope.launch {
             Log.d(TAG, "Starting signUp process")
             isLoading = true
@@ -68,15 +69,17 @@ class UserViewModel : ViewModel() {
             userRepository.signUp(email, password)
                 .onSuccess { firebaseUser ->
                     Log.d(TAG, "Authentication successful, creating user document")
+                    val currentTime = Date()
                     val user = User(
-                        uid = firebaseUser.uid,
                         email = email,
-                        roles = roles,
+                        role = role,
                         nickname = nickname,
-                        physicalFeatures = physicalFeatures
+                        physicalFeatures = physicalFeatures,
+                        createdAt = currentTime,
+                        updatedAt = currentTime
                     )
                     
-                    userRepository.createUser(user)
+                    userRepository.createUser(firebaseUser.uid, user)
                         .onSuccess {
                             Log.d(TAG, "✅ User document created successfully")
                             currentUser = user
@@ -150,13 +153,21 @@ class UserViewModel : ViewModel() {
             isLoading = true
             errorMessage = null
             
-            userRepository.updateUser(user)
-                .onSuccess {
-                    currentUser = user
-                }
-                .onFailure { error ->
-                    errorMessage = error.message
-                }
+            val currentFirebaseUser = userRepository.getCurrentUser()
+            if (currentFirebaseUser != null) {
+                userRepository.updateUser(currentFirebaseUser.uid, user)
+                    .onSuccess {
+                        currentUser = user
+                        Log.d(TAG, "✅ User updated successfully")
+                    }
+                    .onFailure { error ->
+                        Log.e(TAG, "❌ Failed to update user: ${error.message}")
+                        errorMessage = error.message
+                    }
+            } else {
+                Log.e(TAG, "❌ No authenticated user found")
+                errorMessage = "ユーザーが認証されていません"
+            }
             
             isLoading = false
         }
@@ -176,9 +187,9 @@ class UserViewModel : ViewModel() {
         }
     }
 
-    fun updateRoles(roles: List<String>) {
+    fun updateRole(role: String) {
         currentUser?.let { user ->
-            val updatedUser = user.copy(roles = roles)
+            val updatedUser = user.copy(role = role)
             updateUser(updatedUser)
         }
     }

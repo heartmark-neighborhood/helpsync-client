@@ -26,16 +26,16 @@ fun ProfileEditScreen(
     val user = userViewModel.currentUser
     var nickname by remember { mutableStateOf(user?.nickname ?: "") }
     var physicalFeatures by remember { mutableStateOf(user?.physicalFeatures ?: "") }
-    var selectedRoles by remember { mutableStateOf(user?.roles?.toSet() ?: setOf()) }
+    var selectedRole by remember { mutableStateOf(user?.role ?: "") }
     var hasUnsavedChanges by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
     // 変更検知
-    LaunchedEffect(nickname, physicalFeatures, selectedRoles) {
+    LaunchedEffect(nickname, physicalFeatures, selectedRole) {
         if (user != null) {
             hasUnsavedChanges = nickname != user.nickname || 
                                physicalFeatures != user.physicalFeatures ||
-                               selectedRoles != user.roles.toSet()
+                               selectedRole != user.role
         }
     }
 
@@ -74,12 +74,12 @@ fun ProfileEditScreen(
                         val updatedUser = currentUser.copy(
                             nickname = nickname,
                             physicalFeatures = physicalFeatures,
-                            roles = selectedRoles.toList()
+                            role = selectedRole
                         )
                         userViewModel.updateUser(updatedUser)
                     }
                 },
-                enabled = hasUnsavedChanges && !userViewModel.isLoading && nickname.isNotBlank()
+                enabled = hasUnsavedChanges && !userViewModel.isLoading && nickname.isNotBlank() && selectedRole.isNotEmpty()
             ) {
                 if (userViewModel.isLoading) {
                     CircularProgressIndicator(
@@ -194,14 +194,10 @@ fun ProfileEditScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Checkbox(
-                                    checked = selectedRoles.contains(UserRole.SUPPORTER.value),
-                                    onCheckedChange = { checked ->
-                                        selectedRoles = if (checked) {
-                                            selectedRoles + UserRole.SUPPORTER.value
-                                        } else {
-                                            selectedRoles - UserRole.SUPPORTER.value
-                                        }
+                                RadioButton(
+                                    selected = selectedRole == UserRole.SUPPORTER.value,
+                                    onClick = {
+                                        selectedRole = UserRole.SUPPORTER.value
                                     }
                                 )
                                 
@@ -224,14 +220,10 @@ fun ProfileEditScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Checkbox(
-                                    checked = selectedRoles.contains(UserRole.REQUESTER.value),
-                                    onCheckedChange = { checked ->
-                                        selectedRoles = if (checked) {
-                                            selectedRoles + UserRole.REQUESTER.value
-                                        } else {
-                                            selectedRoles - UserRole.REQUESTER.value
-                                        }
+                                RadioButton(
+                                    selected = selectedRole == UserRole.REQUESTER.value,
+                                    onClick = {
+                                        selectedRole = UserRole.REQUESTER.value
                                     }
                                 )
                                 
@@ -250,9 +242,9 @@ fun ProfileEditScreen(
                             }
                         }
                         
-                        if (selectedRoles.isEmpty()) {
+                        if (selectedRole.isEmpty()) {
                             Text(
-                                text = "少なくとも一つの役割を選択してください",
+                                text = "役割を選択してください",
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall
                             )
