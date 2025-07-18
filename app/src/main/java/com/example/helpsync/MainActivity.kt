@@ -24,8 +24,8 @@ import com.example.helpsync.help_mark_holder_profile_screen.HelpMarkHolderProfil
 import com.example.helpsync.help_mark_holder_matching_screen.HelpMarkHolderMatchingScreen
 import com.example.helpsync.help_mark_holder_matching_complete_screen.HelpMarkHolderMatchingCompleteScreen
 import com.example.helpsync.settings_screen.SettingsScreen
+import com.example.helpsync.supporter_setting_screen.SupporterSettingsScreen
 import androidx.compose.runtime.saveable.rememberSaveable
-
 
 
 class MainActivity : ComponentActivity() {
@@ -47,8 +47,7 @@ class MainActivity : ComponentActivity() {
                     ) {
 
                         // 役割選択画面
-                        composable(AppScreen.RoleSelection.name) {                       
-
+                        composable(AppScreen.RoleSelection.name) {
                             RoleSelectionScreen(
                                 onRoleSelected = { roleType ->
                                     when (roleType) {
@@ -56,8 +55,7 @@ class MainActivity : ComponentActivity() {
                                             navController.navigate(AppScreen.NicknameSetting.name)
                                         }
                                         RoleType.HELP_MARK_HOLDER -> {
-                                            navController.navigate(AppScreen.HelpMarkHolderHome.name)
-
+                                            navController.navigate(AppScreen.HelpMarkHolderProfile.name)
                                         }
                                     }
                                 }
@@ -118,13 +116,13 @@ class MainActivity : ComponentActivity() {
                         composable(AppScreen.HelpMarkHolderHome.name) {
                             HelpMarkHolderHomeScreen(
                                 onMatchingClick = {
-                                    navController.navigate(AppScreen.HelpMarkHolderProfile.name)
+                                    navController.navigate(AppScreen.HelpMarkHolderMatching.name)
                                 },
                                 onHomeClick = {
                                     // 既にホーム画面なので何もしない、または画面をリフレッシュ
                                 },
                                 onSettingsClick = {
-                                    navController.navigate(AppScreen.Settings.name)
+                                    navController.navigate(AppScreen.SupportContentInput.name)
                                 }
                             )
                         }
@@ -136,8 +134,8 @@ class MainActivity : ComponentActivity() {
                                     navController.popBackStack()
                                 },
                                 onCompleteClick = {
-                                    navController.navigate(AppScreen.HelpMarkHolderMatching.name) {
-                                        popUpTo(AppScreen.HelpMarkHolderProfile.name) { inclusive = true }
+                                    navController.navigate(AppScreen.HelpMarkHolderHome.name) {
+                                        popUpTo(AppScreen.RoleSelection.name) { inclusive = false }
                                     }
                                 }
                             )
@@ -176,6 +174,37 @@ class MainActivity : ComponentActivity() {
                         // 設定画面
                         composable(AppScreen.Settings.name) {
                             SettingsScreen(
+                                onBackClick = {
+                                    navController.popBackStack()
+                                },
+                                onProfileClick = {
+                                    navController.navigate(AppScreen.HelpMarkHolderProfileFromSettings.name)
+                                }
+                            )
+                        }
+
+                        // 設定からのヘルプマーク所持者プロフィール入力画面
+                        composable(AppScreen.HelpMarkHolderProfileFromSettings.name) {
+                            HelpMarkHolderProfileScreen(
+                                onBackClick = {
+                                    navController.popBackStack()
+                                },
+                                onCompleteClick = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+
+                        // 支援内容入力画面
+                        composable(AppScreen.SupportContentInput.name) {
+                            SupporterSettingsScreen(
+                                nickname = nickname,
+                                onNicknameChange = { newNickname -> nickname = newNickname },
+                                photoUri = photoUri,
+                                onPhotoChange = { newUri -> photoUri = newUri },
+                                onEditClick = {
+                                    navController.popBackStack()
+                                },
                                 onBackClick = {
                                     navController.popBackStack()
                                 }

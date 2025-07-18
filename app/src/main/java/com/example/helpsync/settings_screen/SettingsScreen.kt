@@ -23,7 +23,8 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -65,7 +66,7 @@ fun SettingsScreen(
                 icon = Icons.Default.Person,
                 title = "プロフィール設定",
                 description = "個人情報とプロフィール写真の管理",
-                onClick = { /* TODO: プロフィール設定画面へ遷移 */ }
+                onClick = onProfileClick
             )
             
             // 通知設定

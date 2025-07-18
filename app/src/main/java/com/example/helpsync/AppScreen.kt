@@ -8,7 +8,9 @@ enum class AppScreen {
     RequestDetail,
     HelpMarkHolderHome,
     HelpMarkHolderProfile,
+    HelpMarkHolderProfileFromSettings,
     HelpMarkHolderMatching,
     HelpMarkHolderMatchingComplete,
-    Settings
+    Settings,
+    SupportContentInput
 }
