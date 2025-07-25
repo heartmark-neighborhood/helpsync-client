@@ -160,14 +160,7 @@ fun HelpMarkHolderHomeScreen(
         
         Spacer(modifier = Modifier.weight(1f))
         
-        // 下部の説明
-        Text(
-            text = "Bluetoothとロケーション機能をオンにして\n近くの支援者を探しています",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF757575),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        
         }
         
         // ボトムナビゲーションバー

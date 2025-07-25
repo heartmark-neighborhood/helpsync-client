@@ -86,56 +86,7 @@ fun HelpMarkHolderMatchingCompleteScreen(
         
         Spacer(modifier = Modifier.height(32.dp))
         
-        // 支援者情報カード
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // 支援者のアバター
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF2196F3)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "支援者",
-                        modifier = Modifier.size(30.dp),
-                        tint = Color.White
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    // 評価表示
-                    repeat(5) { index ->
-                        Text(
-                            text = "⭐",
-                            fontSize = 16.sp,
-                            color = if (index < 4) Color(0xFFFFB000) else Color(0xFFE0E0E0)
-                        )
-                    }
-                }
-            }
-        }
+        
         
         Spacer(modifier = Modifier.height(32.dp))
         
