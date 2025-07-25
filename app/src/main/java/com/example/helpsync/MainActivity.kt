@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -33,7 +34,8 @@ import com.example.helpsync.settings_screen.SettingsScreen
 
 import com.example.helpsync.viewmodel.UserViewModel
 
-import com.example.helpsync.supporter_setting_screen.SupporterSettingsScreen
+import com.example.helpsync.supporter_setting_screen.SupporterSettingScreen
+import com.example.helpsync.MainScreen
 
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.google.firebase.FirebaseApp
@@ -69,7 +71,7 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val userViewModel: UserViewModel = viewModel()
 
-                var nickname by rememberSaveable { mutableStateOf("") }
+                // UserViewModelから状態を取得（重複を避ける）
                 var photoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
                 var selectedRole by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -149,11 +151,19 @@ class MainActivity : ComponentActivity() {
                         composable(AppScreen.RoleSelection.name) {
                             RoleSelectionScreen(
                                 onRoleSelected = { roleType ->
-
-                                    // 選択されたロールを一時保存（データベースには保存しない）
-                                    selectedRole = when (roleType) {
+                                    // 選択されたロールをFirebaseに保存
+                                    val roleString = when (roleType) {
                                         RoleType.SUPPORTER -> "supporter"
                                         RoleType.HELP_MARK_HOLDER -> "requester"
+                                    }
+                                    
+                                    // ローカル状態も更新
+                                    selectedRole = roleString
+                                    
+                                    // Firebaseに即座に保存
+                                    userViewModel.updateRole(roleString)
+                                    
+                                    // ロールに応じた画面に遷移
                                     when (roleType) {
                                         RoleType.SUPPORTER -> {
                                             navController.navigate(AppScreen.NicknameSetting.name)
@@ -162,31 +172,32 @@ class MainActivity : ComponentActivity() {
                                             navController.navigate(AppScreen.HelpMarkHolderProfile.name)
                                         }
                                     }
-                                    
-                                    // ニックネーム設定画面に遷移
-                                    navController.navigate(AppScreen.NicknameSetting.name)
                                 }
                             )
                         }
 
                         composable(AppScreen.NicknameSetting.name) {
                             NicknameSetting(
-                                nickname = nickname,
-                                onNicknameChange = { nickname = it },
+                                nickname = userViewModel.currentUser?.nickname ?: "",
+                                onNicknameChange = { /* 使用しない（内部でlocalNicknameを管理） */ },
                                 photoUri = photoUri,
-                                onPhotoChange = { photoUri = it },
+                                onPhotoChange = { uri: Uri? -> photoUri = uri },
+                                userViewModel = userViewModel,
                                 onBackClick = {
                                     navController.navigate(AppScreen.RoleSelection.name) {
                                         popUpTo(AppScreen.NicknameSetting.name) { inclusive = true }
                                     }
                                 },
-                                onDoneClick = {
-                                    // ニックネームを保存
+                                onDoneClick = { nickname ->
+                                    // ニックネームをFirebaseに保存
                                     userViewModel.updateNickname(nickname)
                                     
-                                    // 選択されたロールも保存
-                                    selectedRole?.let { role ->
-                                        userViewModel.updateRole(role)
+                                    // ロールは既にRoleSelectionで保存済み
+                                    // 念のため確認して、未保存の場合のみ保存
+                                    if (userViewModel.currentUser?.role.isNullOrEmpty()) {
+                                        selectedRole?.let { role ->
+                                            userViewModel.updateRole(role)
+                                        }
                                     }
                                     
                                     // ロールに応じたホーム画面に遷移
@@ -204,13 +215,43 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable(AppScreen.SupporterHome.name) {
-                            MainScreen(
-                                navController = navController,
-                                nickname = nickname,
-                                onNicknameChange = { nickname = it },
-                                photoUri = photoUri,
-                                onPhotoChange = { photoUri = it }
-                            )
+                            // 認証状態をチェック
+                            val currentFirebaseUser = userViewModel.getCurrentFirebaseUser()
+                            
+                            if (currentFirebaseUser == null) {
+                                // 認証されていない場合はサインイン画面にリダイレクト
+                                LaunchedEffect(Unit) {
+                                    Log.d("MainActivity", "❌ User not authenticated, redirecting to SignIn")
+                                    navController.navigate(AppScreen.SignIn.name) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+                                }
+                            } else {
+                                Log.d("MainActivity", "✅ User authenticated: ${currentFirebaseUser.uid}")
+                                MainScreen(
+                                    navController = navController,
+                                    nickname = userViewModel.currentUser?.nickname ?: "",
+                                    onNicknameChange = { nickname ->
+                                        // 保存ボタンが押された時のみFirebaseに保存
+                                        userViewModel.updateNickname(nickname)
+                                    },
+                                    photoUri = photoUri,
+                                    onPhotoChange = { uri: Uri? -> photoUri = uri },
+                                    onPhotoSave = { uri ->
+                                        // 写真をFirebase StorageにアップロードしてからFirestoreに保存
+                                        userViewModel.uploadProfileImage(uri) { downloadUrl ->
+                                            android.util.Log.d("MainActivity", "✅ 画像アップロード完了: $downloadUrl")
+                                            if (downloadUrl.isNotEmpty()) {
+                                                android.util.Log.d("MainActivity", "💾 iconUrlをデータベースに保存中...")
+                                                userViewModel.updateUserIconUrl(downloadUrl)
+                                            } else {
+                                                android.util.Log.e("MainActivity", "❌ ダウンロードURLが空です")
+                                            }
+                                        }
+                                    },
+                                    userViewModel = userViewModel
+                                )
+                            }
                         }
 
                         composable(AppScreen.RequestAcceptanceScreen.name) {
@@ -319,18 +360,7 @@ class MainActivity : ComponentActivity() {
 
                         // 支援内容入力画面
                         composable(AppScreen.SupportContentInput.name) {
-                            SupporterSettingsScreen(
-                                nickname = nickname,
-                                onNicknameChange = { newNickname -> nickname = newNickname },
-                                photoUri = photoUri,
-                                onPhotoChange = { newUri -> photoUri = newUri },
-                                onEditClick = {
-                                    navController.popBackStack()
-                                },
-                                onBackClick = {
-                                    navController.popBackStack()
-                                }
-                            )
+                            Text("Support Content Input - Under Development")
                         }
                     }
                 }

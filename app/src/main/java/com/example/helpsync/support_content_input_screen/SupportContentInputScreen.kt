@@ -1,4 +1,4 @@
-package com.example.helpsync.supporter_setting_screen
+package com.example.helpsync.support_content_input_screen
 
 import android.net.Uri
 import androidx.compose.foundation.border
@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.sp
 
 
 @Composable
-fun SupporterSettingsScreen(
+fun SupportContentInputScreen(
     nickname: String,
     onNicknameChange: (String) -> Unit,
     photoUri: Uri?,
