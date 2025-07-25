@@ -76,7 +76,7 @@ fun HelpMarkHolderMatchingScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF3E5F5))
+            .background(Color(0xFFFFFF))
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -109,7 +109,7 @@ fun HelpMarkHolderMatchingScreen(
             text = "マッチング中...",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF9C27B0)
+            color = Color(0xFFFFFF)
         )
         
         Spacer(modifier = Modifier.height(16.dp))

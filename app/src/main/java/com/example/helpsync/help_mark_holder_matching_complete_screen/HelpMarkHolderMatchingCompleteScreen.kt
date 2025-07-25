@@ -41,7 +41,7 @@ fun HelpMarkHolderMatchingCompleteScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFE8F5E8))
+            .background(Color(0xFFFFFF))
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
