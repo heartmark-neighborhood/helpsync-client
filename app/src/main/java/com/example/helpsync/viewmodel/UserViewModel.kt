@@ -184,6 +184,19 @@ class UserViewModel : ViewModel() {
         }
     }
 
+    // 公開メソッド：現在認証されているユーザーのデータを再読み込み
+    fun refreshCurrentUserData() {
+        Log.d(TAG, "=== refreshCurrentUserData called ===")
+        val firebaseUser = userRepository.getCurrentUser()
+        if (firebaseUser != null) {
+            Log.d(TAG, "🔄 Refreshing user data for UID: ${firebaseUser.uid}")
+            loadUserData(firebaseUser.uid)
+        } else {
+            Log.e(TAG, "❌ No authenticated user found for refresh")
+            errorMessage = "認証されたユーザーが見つかりません。再ログインしてください。"
+        }
+    }
+
     fun updateUser(user: User) {
         viewModelScope.launch {
             Log.d(TAG, "=== updateUser called ===")

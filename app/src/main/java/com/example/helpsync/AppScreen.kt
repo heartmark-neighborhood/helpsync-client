@@ -15,6 +15,5 @@ enum class AppScreen {
     HelpMarkHolderProfileFromSettings,
     HelpMarkHolderMatching,
     HelpMarkHolderMatchingComplete,
-    Settings,
-    SupportContentInput
+    Settings
 }

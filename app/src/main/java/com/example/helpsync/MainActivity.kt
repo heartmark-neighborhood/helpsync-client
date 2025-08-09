@@ -31,11 +31,12 @@ import com.example.helpsync.help_mark_holder_profile_screen.HelpMarkHolderProfil
 import com.example.helpsync.help_mark_holder_matching_screen.HelpMarkHolderMatchingScreen
 import com.example.helpsync.help_mark_holder_matching_complete_screen.HelpMarkHolderMatchingCompleteScreen
 import com.example.helpsync.settings_screen.SettingsScreen
+import com.example.helpsync.supporter_home_screen.SupporterHomeScreen
+import com.example.helpsync.MainScreen
 
 import com.example.helpsync.viewmodel.UserViewModel
 
 import com.example.helpsync.supporter_setting_screen.SupporterSettingScreen
-import com.example.helpsync.MainScreen
 
 import androidx.compose.runtime.saveable.rememberSaveable
 import com.google.firebase.FirebaseApp
@@ -285,7 +286,7 @@ class MainActivity : ComponentActivity() {
                                     // 既にホーム画面なので何もしない、または画面をリフレッシュ
                                 },
                                 onSettingsClick = {
-                                    navController.navigate(AppScreen.SupportContentInput.name)
+                                    navController.navigate(AppScreen.Settings.name)
                                 }
                             )
                         }
@@ -340,8 +341,8 @@ class MainActivity : ComponentActivity() {
                                 onBackClick = {
                                     navController.popBackStack()
                                 },
-                                onProfileClick = {
-                                    navController.navigate(AppScreen.HelpMarkHolderProfileFromSettings.name)
+                                onCompleteClick = {
+                                    navController.popBackStack()
                                 }
                             )
                         }
@@ -356,11 +357,6 @@ class MainActivity : ComponentActivity() {
                                     navController.popBackStack()
                                 }
                             )
-                        }
-
-                        // 支援内容入力画面
-                        composable(AppScreen.SupportContentInput.name) {
-                            Text("Support Content Input - Under Development")
                         }
                     }
                 }

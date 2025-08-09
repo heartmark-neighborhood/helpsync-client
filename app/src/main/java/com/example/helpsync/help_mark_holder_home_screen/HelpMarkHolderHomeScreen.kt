@@ -171,15 +171,20 @@ fun HelpMarkHolderHomeScreen(
         }
         
         // ボトムナビゲーションバー
-        BottomAppBar(
+        Card(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth(),
-            containerColor = Color(0xFF6200EE),
-            contentColor = Color.White
+            shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 // ホームボタン
@@ -190,15 +195,15 @@ fun HelpMarkHolderHomeScreen(
                     IconButton(onClick = onHomeClick) {
                         Icon(
                             imageVector = Icons.Default.Home,
-                            contentDescription = "ホーム",
-                            tint = Color.White,
+                            contentDescription = "Home",
+                            tint = Color(0xFF757575),
                             modifier = Modifier.size(24.dp)
                         )
                     }
                     Text(
-                        text = "ホーム",
-                        color = Color.White,
-                        fontSize = 10.sp,
+                        text = "Home",
+                        color = Color(0xFF757575),
+                        fontSize = 12.sp,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -211,15 +216,15 @@ fun HelpMarkHolderHomeScreen(
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "設定",
-                            tint = Color.White,
+                            contentDescription = "Settings",
+                            tint = Color(0xFF757575),
                             modifier = Modifier.size(24.dp)
                         )
                     }
                     Text(
-                        text = "設定",
-                        color = Color.White,
-                        fontSize = 10.sp,
+                        text = "Settings",
+                        color = Color(0xFF757575),
+                        fontSize = 12.sp,
                         textAlign = TextAlign.Center
                     )
                 }
