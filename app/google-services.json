@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "546601050345",
+    "project_id": "heartmark-neighborhood",
+    "storage_bucket": "heartmark-neighborhood.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:546601050345:android:453db6362ad206d04cd078",
+        "android_client_info": {
+          "package_name": "com.example.helpsync"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "546601050345-jhe967no5pitjvmepmdvd8lcmnf859am.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.helpsync",
+            "certificate_hash": "2efb60f74f336c0871e7a88214e6550d10543163"
+          }
+        },
+        {
+          "client_id": "546601050345-cuj1tu4q3p7j2qj7b9e35nui4v3c3tk2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBAEHfSVMg_t0C544K9lvmj_pxnwDnCc1Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "546601050345-cuj1tu4q3p7j2qj7b9e35nui4v3c3tk2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
