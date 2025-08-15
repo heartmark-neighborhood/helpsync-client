@@ -11,7 +11,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.example.helpsync.supporter_home_screen.SupporterHomeScreen
-import com.example.helpsync.supporter_setting_screen.SupporterSettingsScreen
+import com.example.helpsync.supporter_setting_screen.SupporterSettingScreen
+import com.example.helpsync.viewmodel.UserViewModel
+import android.net.Uri
 
 enum class MainScreenTab(
     val icon: ImageVector,
@@ -26,7 +28,11 @@ enum class MainScreenTab(
 fun MainScreen(
     navController: NavHostController,
     nickname: String,
-    onNicknameChange: (String) -> Unit
+    onNicknameChange: (String) -> Unit,
+    photoUri: Uri?,
+    onPhotoChange: (Uri?) -> Unit,
+    onPhotoSave: (Uri) -> Unit = {},
+    userViewModel: UserViewModel
 ) {
     val tabNavController = rememberNavController()
     val currentDestination by tabNavController.currentBackStackEntryAsState()
@@ -66,9 +72,20 @@ fun MainScreen(
                 )
             }
             composable(MainScreenTab.Settings.route) {
-                SupporterSettingsScreen(
+                SupporterSettingScreen(
                     nickname = nickname,
-                    onNicknameChange = onNicknameChange
+                    onNicknameChange = { /* リアルタイム更新なし */ },
+                    photoUri = photoUri,
+                    onPhotoChange = onPhotoChange,
+                    onEditClick = { newNickname: String ->
+                        // 保存ボタンが押された時にFirebaseに保存
+                        onNicknameChange(newNickname)
+                    },
+                    onPhotoSave = { uri: Uri ->
+                        // 写真保存時にFirebaseに保存
+                        onPhotoSave(uri)
+                    },
+                    userViewModel = userViewModel
                 )
             }
         }

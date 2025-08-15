@@ -1,11 +1,19 @@
 package com.example.helpsync
 
 enum class AppScreen {
+    SignIn,
+    SignUp,
+    Profile,
+    ProfileEdit,
     RoleSelection,
     NicknameSetting,
     SupporterHome,
     RequestAcceptanceScreen,
     RequestDetail,
-    // TODO: ヘルプマーク所持者用の画面を追加
-    HelpMarkHolderHome
+    HelpMarkHolderHome,
+    HelpMarkHolderProfile,
+    HelpMarkHolderProfileFromSettings,
+    HelpMarkHolderMatching,
+    HelpMarkHolderMatchingComplete,
+    Settings
 }
