@@ -1,5 +1,7 @@
 package com.example.helpsync
 
+import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
@@ -9,11 +11,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.*
+import androidx.navigation.navArgument
+import com.example.helpsync.request_acceptance_screen.RequestAcceptanceScreen
 import com.example.helpsync.supporter_home_screen.SupporterHomeScreen
 import com.example.helpsync.supporter_setting_screen.SupporterSettingScreen
+import com.example.helpsync.support_details_confirmation_screen.SupportRequestDetailScreen
 import com.example.helpsync.viewmodel.UserViewModel
-import android.net.Uri
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 enum class MainScreenTab(
     val icon: ImageVector,
@@ -45,7 +56,7 @@ fun MainScreen(
                     NavigationBarItem(
                         icon = { Icon(item.icon, contentDescription = item.label) },
                         label = { Text(item.label) },
-                        selected = currentRoute == item.route,
+                        selected = currentRoute?.startsWith(item.route) ?: false,
                         onClick = {
                             if (currentRoute != item.route) {
                                 tabNavController.navigate(item.route) {
@@ -66,26 +77,67 @@ fun MainScreen(
         ) {
             composable(MainScreenTab.Home.route) {
                 SupporterHomeScreen(
-                    onDoneClick = {
-                        navController.navigate(AppScreen.RequestAcceptanceScreen.name)
+                    onSupportRequestClick = { nickname, content ->
+                        // ✅ このログがクリック時に表示されるか確認
+                        Log.d("MainScreen", "Card clicked! Navigating with: $nickname")
+
+                        val requestInfo = RequestNavInfo(nickname, content)
+                        val infoJson = Json.encodeToString(requestInfo)
+                        val encodedJson = URLEncoder.encode(infoJson, StandardCharsets.UTF_8.toString())
+
+                        tabNavController.navigate("main/request_acceptance/$encodedJson")
                     }
                 )
             }
             composable(MainScreenTab.Settings.route) {
                 SupporterSettingScreen(
                     nickname = nickname,
-                    onNicknameChange = { /* リアルタイム更新なし */ },
+                    onNicknameChange = {},
                     photoUri = photoUri,
                     onPhotoChange = onPhotoChange,
-                    onEditClick = { newNickname: String ->
-                        // 保存ボタンが押された時にFirebaseに保存
-                        onNicknameChange(newNickname)
-                    },
-                    onPhotoSave = { uri: Uri ->
-                        // 写真保存時にFirebaseに保存
-                        onPhotoSave(uri)
-                    },
+                    onEditClick = { newNickname: String -> onNicknameChange(newNickname) },
+                    onPhotoSave = { uri: Uri -> onPhotoSave(uri) },
                     userViewModel = userViewModel
+                )
+            }
+
+            composable(
+                route = "main/request_acceptance/{requestInfo}",
+                arguments = listOf(navArgument("requestInfo") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val requestInfoJson = backStackEntry.arguments?.getString("requestInfo")
+                val requestInfo = requestInfoJson?.let {
+                    val decodedJson = URLDecoder.decode(it, StandardCharsets.UTF_8.toString())
+                    Json.decodeFromString<RequestNavInfo>(decodedJson)
+                } ?: RequestNavInfo("エラー", "情報の取得に失敗しました")
+
+                RequestAcceptanceScreen(
+                    nickname = requestInfo.nickname,
+                    content = requestInfo.content,
+                    onAcceptClick = {
+                        val encodedJson = URLEncoder.encode(requestInfoJson, StandardCharsets.UTF_8.toString())
+                        tabNavController.navigate("main/request_detail/$encodedJson")
+                    },
+                    onCancelClick = { tabNavController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = "main/request_detail/{requestInfo}",
+                arguments = listOf(navArgument("requestInfo") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val requestInfoJson = backStackEntry.arguments?.getString("requestInfo")
+                val requestInfo = requestInfoJson?.let {
+                    val decodedJson = URLDecoder.decode(it, StandardCharsets.UTF_8.toString())
+                    Json.decodeFromString<RequestNavInfo>(decodedJson)
+                } ?: RequestNavInfo("エラー", "情報の取得に失敗しました")
+
+                SupportRequestDetailScreen(
+                    nickname = requestInfo.nickname,
+                    supportContent = requestInfo.content,
+                    onDoneClick = {
+                        tabNavController.popBackStack(MainScreenTab.Home.route, inclusive = false)
+                    }
                 )
             }
         }

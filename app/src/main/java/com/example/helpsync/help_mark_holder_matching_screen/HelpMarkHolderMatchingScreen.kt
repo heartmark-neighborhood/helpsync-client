@@ -1,5 +1,9 @@
 package com.example.helpsync.help_mark_holder_matching_screen
 
+import android.content.Intent
+import android.widget.Toast
+import com.example.helpsync.blescanner.BLEScanner
+
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,10 +30,10 @@ fun HelpMarkHolderMatchingScreen(
     onMatchingComplete: () -> Unit = {},
     onCancel: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     var timeRemaining by remember { mutableIntStateOf(30) }
     var isMatching by remember { mutableStateOf(true) }
-    
-    // アニメーション
+
     val infiniteTransition = rememberInfiniteTransition(label = "matching_animation")
     val rotationAngle by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -39,40 +44,34 @@ fun HelpMarkHolderMatchingScreen(
         ),
         label = "rotation"
     )
-    
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse"
-    )
-    
-    // タイマー
+
     LaunchedEffect(isMatching) {
         if (isMatching) {
             while (timeRemaining > 0 && isMatching) {
                 delay(1000)
                 timeRemaining--
             }
-            if (timeRemaining > 0) {
-                // マッチング成功
-                onMatchingComplete()
-                isMatching = false
+            if (timeRemaining <= 0) {
+                Toast.makeText(context, "マッチングに失敗しました", Toast.LENGTH_SHORT).show()
+                onCancel()
             }
         }
     }
-    
-    // ランダムでマッチング成功（デモ用）
+
     LaunchedEffect(Unit) {
-        delay((10000..25000).random().toLong()) // 10-25秒でランダムマッチング
+        delay((10000..25000).random().toLong())
         if (isMatching) {
             onMatchingComplete()
         }
     }
-    
+
+    DisposableEffect(Unit) {
+        onDispose {
+            val stopIntent = Intent(context, BLEScanner::class.java)
+            context.stopService(stopIntent)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -82,8 +81,7 @@ fun HelpMarkHolderMatchingScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Spacer(modifier = Modifier.weight(1f))
-        
-        // アニメーションアイコン
+
         Box(
             modifier = Modifier
                 .size(120.dp)
@@ -97,33 +95,31 @@ fun HelpMarkHolderMatchingScreen(
                 contentDescription = "マッチング中",
                 modifier = Modifier
                     .size(60.dp)
-                    .then(Modifier.rotate(-rotationAngle)), // アイコン自体は回転させない
+                    .then(Modifier.rotate(-rotationAngle)),
                 tint = Color(0xFF9C27B0)
             )
         }
-        
+
         Spacer(modifier = Modifier.height(32.dp))
-        
-        // メッセージ
+
         Text(
             text = "マッチング中...",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF9C27B0)
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         Text(
             text = "近くの支援者を探しています",
             style = MaterialTheme.typography.bodyLarge,
             color = Color(0xFF757575),
             textAlign = TextAlign.Center
         )
-        
+
         Spacer(modifier = Modifier.height(24.dp))
-        
-        // タイマー表示
+
         Card(
             modifier = Modifier.padding(horizontal = 32.dp),
             shape = RoundedCornerShape(16.dp),
@@ -143,9 +139,9 @@ fun HelpMarkHolderMatchingScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF757575)
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 Text(
                     text = "${timeRemaining}秒",
                     style = MaterialTheme.typography.headlineLarge,
@@ -155,10 +151,9 @@ fun HelpMarkHolderMatchingScreen(
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.weight(1f))
-        
-        // キャンセルボタン
+
         OutlinedButton(
             onClick = {
                 isMatching = false
@@ -178,7 +173,7 @@ fun HelpMarkHolderMatchingScreen(
                 fontWeight = FontWeight.Medium
             )
         }
-        
+
         Spacer(modifier = Modifier.height(32.dp))
     }
 }

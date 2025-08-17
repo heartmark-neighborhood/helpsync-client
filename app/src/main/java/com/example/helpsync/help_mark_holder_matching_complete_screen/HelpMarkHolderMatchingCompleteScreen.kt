@@ -19,15 +19,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+
+data class SupporterInfo(
+    val nickname: String = "未定",
+    val eta: String = "未定",
+    val rating: Int = 0,
+    val iconUrl: String? = null
+)
 
 @Composable
 fun HelpMarkHolderMatchingCompleteScreen(
-    onChatClick: () -> Unit = {},
+    supporterInfo: SupporterInfo,
     onHomeClick: () -> Unit = {}
 ) {
-    // アニメーション効果
     val scaleAnimation = remember { Animatable(0f) }
-    
+
     LaunchedEffect(Unit) {
         scaleAnimation.animateTo(
             targetValue = 1f,
@@ -37,7 +44,7 @@ fun HelpMarkHolderMatchingCompleteScreen(
             )
         )
     }
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -47,8 +54,7 @@ fun HelpMarkHolderMatchingCompleteScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Spacer(modifier = Modifier.weight(1f))
-        
-        // 成功アイコン
+
         Box(
             modifier = Modifier
                 .size(120.dp)
@@ -64,29 +70,27 @@ fun HelpMarkHolderMatchingCompleteScreen(
                 tint = Color(0xFF4CAF50)
             )
         }
-        
+
         Spacer(modifier = Modifier.height(32.dp))
-        
-        // 完了メッセージ
+
         Text(
             text = "マッチング完了！",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF4CAF50)
         )
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         Text(
             text = "支援者が見つかりました",
             style = MaterialTheme.typography.bodyLarge,
             color = Color(0xFF757575),
             textAlign = TextAlign.Center
         )
-        
+
         Spacer(modifier = Modifier.height(32.dp))
-        
-        // 支援者情報カード
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -103,7 +107,6 @@ fun HelpMarkHolderMatchingCompleteScreen(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 支援者のアバター
                 Box(
                     modifier = Modifier
                         .size(60.dp)
@@ -111,56 +114,63 @@ fun HelpMarkHolderMatchingCompleteScreen(
                         .background(Color(0xFF2196F3)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "支援者",
-                        modifier = Modifier.size(30.dp),
-                        tint = Color.White
-                    )
+                    if (supporterInfo.iconUrl != null && supporterInfo.iconUrl.isNotEmpty()) {
+                        AsyncImage(
+                            model = supporterInfo.iconUrl,
+                            contentDescription = "支援者プロフィール写真",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "支援者",
+                            modifier = Modifier.size(30.dp),
+                            tint = Color.White
+                        )
+                    }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Text(
-                    text = "やさしい人",
+                    text = supporterInfo.nickname,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF2196F3)
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 Text(
-                    text = "約3分で到着予定",
+                    text = "約${supporterInfo.eta}分で到着予定",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFF757575)
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    // 評価表示
                     repeat(5) { index ->
                         Text(
                             text = "⭐",
                             fontSize = 16.sp,
-                            color = if (index < 4) Color(0xFFFFB000) else Color(0xFFE0E0E0)
+                            color = if (index < supporterInfo.rating) Color(0xFFFFB000) else Color(0xFFE0E0E0)
                         )
                     }
                 }
             }
         }
-        
+
         Spacer(modifier = Modifier.height(32.dp))
-        
-        
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
-        // ホームに戻るボタン
+
         OutlinedButton(
             onClick = onHomeClick,
             modifier = Modifier
@@ -177,9 +187,7 @@ fun HelpMarkHolderMatchingCompleteScreen(
                 fontWeight = FontWeight.Medium
             )
         }
-        
+
         Spacer(modifier = Modifier.weight(1f))
-        
-        
     }
 }
