@@ -6,35 +6,38 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import com.example.helpsync.AppScreen
 import kotlinx.coroutines.delay
 
 @SuppressLint("DefaultLocale")
 @Composable
 fun RequestAcceptanceScreen(
-    navController: NavController,
-    onDoneClick: () -> Unit = {}
+    // ✅ 引数を現在の仕様に合わせます
+    nickname: String,
+    content: String,
+    onAcceptClick: () -> Unit,
+    onCancelClick: () -> Unit
 ) {
     var time by remember { mutableIntStateOf(60) }
 
-    // タイマー処理：0秒になったらホームへ戻る
+    // タイマー処理：0秒になったら前の画面へ戻る
     LaunchedEffect(Unit) {
         while (time > 0) {
             delay(1000)
             time--
         }
-        navController.navigate(AppScreen.SupporterHome.name) {
-            popUpTo(AppScreen.RequestAcceptanceScreen.name) { inclusive = true }
-        }
+        // ✅ onCancelClickを呼び出して戻る
+        onCancelClick()
     }
 
     Surface(
@@ -47,12 +50,39 @@ fun RequestAcceptanceScreen(
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.align(Alignment.Center)
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(bottom = 64.dp) // キャンセルボタンとのスペースを確保
             ) {
+                // ✅ 依頼者と内容を表示するカードを追加
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Face, "依頼者")
+                            Spacer(Modifier.width(8.dp))
+                            Text(nickname, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        }
+                        Row(verticalAlignment = Alignment.Top) {
+                            Icon(Icons.Default.Info, "内容")
+                            Spacer(Modifier.width(8.dp))
+                            Text(content, fontSize = 16.sp)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // 助けますボタン
                 Button(
-                    onClick = {
-                        navController.navigate(AppScreen.RequestDetail.name)
-                    },
+                    // ✅ onAcceptClick を呼び出す
+                    onClick = onAcceptClick,
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
                     shape = CircleShape,
                     modifier = Modifier.size(140.dp)
@@ -70,6 +100,7 @@ fun RequestAcceptanceScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // 残り時間表示カード
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     elevation = CardDefaults.cardElevation(6.dp),
@@ -90,14 +121,17 @@ fun RequestAcceptanceScreen(
                         Text(
                             text = "${time}秒",
                             fontSize = 28.sp,
-                            color = Color(0xFF1976D2)
+                            color = if (time <= 10) Color.Red else Color(0xFF1976D2),
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
 
+            // キャンセルボタン
             OutlinedButton(
-                onClick = onDoneClick,
+                // ✅ onCancelClick を呼び出す
+                onClick = onCancelClick,
                 shape = RoundedCornerShape(50),
                 border = BorderStroke(1.dp, Color.DarkGray),
                 modifier = Modifier
