@@ -1,6 +1,7 @@
 package com.example.helpsync.help_mark_holder_profile_screen
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
@@ -491,47 +492,18 @@ fun HelpMarkHolderProfileScreen(
             // 完了ボタン
             Button(
                 onClick = { 
-                    if (isLoading) {
-                        android.util.Log.d("HelpMarkHolderProfileScreen", "⚠️ Upload in progress, ignoring button click")
-                        return@Button
+                    if (isLoading) return@Button
+
+                    Log.d("HelpMarkHolderProfileScreen", "Complete button clicked")
+                    userViewModel.saveProfileChanges(
+                        nickname = localNickname.trim(),
+                        physicalFeatures = localPhysicalFeatures.trim(),
+                        imageUri = localPhotoUri
+                    ) {
+                        // This callback is executed after the save operation is complete.
+                        Log.d("HelpMarkHolderProfileScreen", "Save operation completed, navigating back.")
+                        onCompleteClick()
                     }
-                    
-                    android.util.Log.d("HelpMarkHolderProfileScreen", "=== 完了ボタン clicked ===")
-                    android.util.Log.d("HelpMarkHolderProfileScreen", "localNickname: '$localNickname'")
-                    android.util.Log.d("HelpMarkHolderProfileScreen", "localPhysicalFeatures: '$localPhysicalFeatures'")
-                    
-                    // 変更の有無に関係なく、入力されている項目は常に保存
-                    if (localNickname.trim().isNotEmpty()) {
-                        android.util.Log.d("HelpMarkHolderProfileScreen", "📝 Saving nickname: '$localNickname'")
-                        userViewModel.updateNickname(localNickname.trim())
-                        onNicknameChange(localNickname.trim())
-                    }
-                    
-                    // 身体的特徴も常に保存
-                    if (localPhysicalFeatures.trim().isNotEmpty()) {
-                        android.util.Log.d("HelpMarkHolderProfileScreen", "📝 Saving physical features: '$localPhysicalFeatures'")
-                        userViewModel.updatePhysicalFeatures(localPhysicalFeatures.trim())
-                    }
-                    
-                    // 写真も常に保存（新しく選択された場合）
-                    if (localPhotoUri != null) {
-                        android.util.Log.d("HelpMarkHolderProfileScreen", "📸 Saving profile image...")
-                        try {
-                            userViewModel.uploadProfileImage(localPhotoUri!!) { downloadUrl ->
-                                android.util.Log.d("HelpMarkHolderProfileScreen", "✅ Image uploaded successfully: $downloadUrl")
-                                if (downloadUrl.isNotEmpty()) {
-                                    userViewModel.updateUserIconUrl(downloadUrl)
-                                    currentPhotoHash = localPhotoHash
-                                }
-                            }
-                            onPhotoSave(localPhotoUri!!)
-                        } catch (e: Exception) {
-                            android.util.Log.e("HelpMarkHolderProfileScreen", "❌ Error uploading image: ${e.message}", e)
-                        }
-                    }
-                    
-                    android.util.Log.d("HelpMarkHolderProfileScreen", "✅ Profile saved successfully")
-                    onCompleteClick()
                 },
                 enabled = isButtonEnabled,
                 modifier = Modifier
