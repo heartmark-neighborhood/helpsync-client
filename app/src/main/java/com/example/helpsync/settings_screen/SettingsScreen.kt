@@ -1,6 +1,7 @@
 package com.example.helpsync.settings_screen
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
@@ -390,56 +391,18 @@ fun SettingsScreen(
             // 完了ボタン
             Button(
                 onClick = {
-                    if (isLoading) {
-                        android.util.Log.d("SettingsScreen", "⚠️ Upload in progress, ignoring button click")
-                        return@Button
+                    if (isLoading) return@Button
+
+                    Log.d("SettingsScreen", "Complete button clicked")
+                    userViewModel.saveProfileChanges(
+                        nickname = localNickname.trim(),
+                        physicalFeatures = localPhysicalFeatures.trim(),
+                        imageUri = localPhotoUri
+                    ) {
+                        // Optional: Handle completion, e.g., show a toast or navigate back
+                        Log.d("SettingsScreen", "Save operation completed.")
+                        // onCompleteClick() // Navigate back if needed
                     }
-                    
-                    android.util.Log.d("SettingsScreen", "=== Complete button clicked ===")
-                    android.util.Log.d("SettingsScreen", "localNickname: '$localNickname'")
-                    android.util.Log.d("SettingsScreen", "localPhysicalFeatures: '$localPhysicalFeatures'")
-                    android.util.Log.d("SettingsScreen", "localPhotoUri: $localPhotoUri")
-                    android.util.Log.d("SettingsScreen", "Is initial setup: $isInitialSetup")
-                    android.util.Log.d("SettingsScreen", "Has any changes: $hasAnyChanges")
-                    
-                    // 初回設定でない場合かつ変更がない場合のみスキップ
-                    if (!isInitialSetup && !hasAnyChanges) {
-                        android.util.Log.d("SettingsScreen", "⚠️ No changes to save")
-                        return@Button
-                    }
-                    
-                    // ニックネームの変更または初回設定の場合は保存
-                    if (hasNicknameChanges || (isInitialSetup && localNickname.trim().isNotEmpty())) {
-                        android.util.Log.d("SettingsScreen", "📝 Saving nickname: '$localNickname'")
-                        userViewModel.updateNickname(localNickname.trim())
-                        onNicknameChange(localNickname.trim())
-                    }
-                    
-                    // 支援内容の変更または初回設定の場合は保存
-                    if (hasPhysicalFeaturesChanges || (isInitialSetup && localPhysicalFeatures.trim().isNotEmpty())) {
-                        android.util.Log.d("SettingsScreen", "📝 Saving physical features: '$localPhysicalFeatures'")
-                        userViewModel.updatePhysicalFeatures(localPhysicalFeatures.trim())
-                    }
-                    
-                    // 写真の変更または初回設定の場合は保存
-                    if ((localPhotoUri != null && hasPhotoChanges) || (isInitialSetup && localPhotoUri != null)) {
-                        android.util.Log.d("SettingsScreen", "📸 Saving profile image...")
-                        try {
-                            userViewModel.uploadProfileImage(localPhotoUri!!) { downloadUrl ->
-                                android.util.Log.d("SettingsScreen", "✅ Image uploaded successfully: $downloadUrl")
-                                if (downloadUrl.isNotEmpty()) {
-                                    userViewModel.updateUserIconUrl(downloadUrl)
-                                    // ハッシュを更新（重複アップロード防止）
-                                    currentPhotoHash = localPhotoHash
-                                }
-                            }
-                            onPhotoSave(localPhotoUri!!)
-                        } catch (e: Exception) {
-                            android.util.Log.e("SettingsScreen", "❌ Error uploading image: ${e.message}", e)
-                        }
-                    }
-                    
-                    android.util.Log.d("SettingsScreen", "✅ Settings saved successfully, staying on current screen")
                 },
                 modifier = Modifier
                     .fillMaxWidth()
