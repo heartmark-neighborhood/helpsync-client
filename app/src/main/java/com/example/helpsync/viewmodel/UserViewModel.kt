@@ -19,13 +19,17 @@ class UserViewModel : ViewModel() {
     companion object {
         private const val TAG = "UserViewModel"
     }
-    
+
     var currentUser by mutableStateOf<User?>(null)
         private set
     
     var isLoading by mutableStateOf(false)
         private set
-    
+
+    var isUploadingImage by mutableStateOf(false)
+        private set
+
+
     var errorMessage by mutableStateOf<String?>(null)
         private set
     
@@ -293,7 +297,7 @@ class UserViewModel : ViewModel() {
         Log.d(TAG, "Image URI: $imageUri")
         
         // 既にアップロード中の場合は処理をスキップ
-        if (isLoading) {
+        if (isUploadingImage) {
             Log.d(TAG, "⚠️ Upload already in progress, ignoring request")
             onComplete("")
             return
@@ -387,6 +391,63 @@ class UserViewModel : ViewModel() {
         } ?: run {
             Log.e(TAG, "❌ No current user found for iconUrl update")
             errorMessage = "ユーザー情報が見つかりません。"
+        }
+    }
+
+    fun saveProfileChanges(
+        nickname: String,
+        physicalFeatures: String,
+        imageUri: Uri?,
+        onComplete: () -> Unit
+    ) {
+        viewModelScope.launch {
+            isLoading = true
+            errorMessage = null
+            try {
+                val userId = userRepository.getCurrentUserId()
+                    ?: throw IllegalStateException("User not authenticated")
+
+                val initialUser = currentUser
+                    ?: throw IllegalStateException("Current user data not found")
+
+                val finalIconUrl = if (imageUri != null) {
+                    Log.d(TAG, "Uploading new profile image...")
+                    val result = userRepository.uploadProfileImage(imageUri, userId)
+                    val downloadUrl = result.getOrThrow()
+
+                    // Delete old image if upload is successful and URL is different
+                    val oldImageUrl = initialUser.iconUrl
+                    if (!oldImageUrl.isNullOrEmpty() && oldImageUrl != downloadUrl) {
+                        Log.d(TAG, "Deleting old profile image: $oldImageUrl")
+                        userRepository.deleteOldProfileImage(oldImageUrl)
+                    }
+                    downloadUrl
+                } else {
+                    initialUser.iconUrl
+                }
+
+                val updatedUser = initialUser.copy(
+                    nickname = nickname,
+                    physicalFeatures = physicalFeatures,
+                    iconUrl = finalIconUrl
+                )
+
+                if (updatedUser != initialUser) {
+                    Log.d(TAG, "Updating user profile information...")
+                    userRepository.updateUser(userId, updatedUser).getOrThrow()
+                    currentUser = updatedUser
+                    Log.d(TAG, "User profile updated successfully.")
+                } else {
+                    Log.d(TAG, "No changes detected, skipping update.")
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to save profile changes", e)
+                errorMessage = "プロフィールの更新に失敗しました: ${e.message}"
+            } finally {
+                isLoading = false
+                onComplete()
+            }
         }
     }
     
