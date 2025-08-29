@@ -67,7 +67,9 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
-    
+
+    implementation(libs.firebase.functions.ktx)
+
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.7.0")
     
