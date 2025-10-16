@@ -39,18 +39,8 @@ class UserViewModel : ViewModel() {
     init {
         Log.d(TAG, "=== UserViewModel Init ===")
         
-        // 開発時のみ自動サインアウト（本番では無効化）
-        val isDevelopment = false // Storage テストのため一時的に無効化
-        if (isDevelopment) {
-            userRepository.signOut()
-            Log.d(TAG, "Auto sign out on app startup (development mode)")
-        } else {
-            Log.d(TAG, "Development mode disabled, preserving auth state")
-        }
-        
-        // 認証状態を初期化
-        isSignedIn = false
-        currentUser = null
+        // ログイン状態を保持するため、自動サインアウトを完全に削除
+        Log.d(TAG, "Preserving auth state on app startup")
         
         // 現在の認証状態をチェック
         val currentFirebaseUser = userRepository.getCurrentUser()
@@ -63,6 +53,8 @@ class UserViewModel : ViewModel() {
             }
         } else {
             Log.d(TAG, "No authenticated user found")
+            isSignedIn = false
+            currentUser = null
         }
         
         // TODO: 認証状態の変更監視を後で追加

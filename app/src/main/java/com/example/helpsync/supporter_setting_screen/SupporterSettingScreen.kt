@@ -3,10 +3,13 @@ package com.example.helpsync.supporter_setting_screen
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
@@ -38,7 +41,8 @@ fun SupporterSettingScreen(
     modifier: Modifier = Modifier,
     onEditClick: (String) -> Unit = {},
     onPhotoSave: (Uri) -> Unit = {},
-    userViewModel: UserViewModel // デフォルト値を削除して必須パラメータに
+    userViewModel: UserViewModel, // デフォルト値を削除して必須パラメータに
+    onSignOut: () -> Unit = {}
 ) {
     // ローカルでニックネームと写真の状態を管理
     var localNickname by remember(nickname) { mutableStateOf(nickname) }
@@ -228,7 +232,8 @@ fun SupporterSettingScreen(
 
     Column(
         modifier = modifier
-            .fillMaxSize()
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -611,6 +616,28 @@ fun SupporterSettingScreen(
                     modifier = Modifier.padding(16.dp)
                 )
             }
+        }
+        
+        // サインアウトボタン
+        Spacer(modifier = Modifier.height(32.dp))
+        OutlinedButton(
+            onClick = {
+                android.util.Log.d("SupporterSettingScreen", "Sign out button clicked")
+                userViewModel.signOut()
+                onSignOut()
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = Color(0xFFD32F2F)
+            ),
+            border = BorderStroke(1.dp, Color(0xFFD32F2F)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                text = "サインアウト",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }
