@@ -60,6 +60,9 @@ dependencies {
     
     // Firebase - Import the Firebase BoM
     implementation(platform(libs.firebase.bom))
+
+    //koin
+    implementation("io.insert-koin:koin-android:4.1.0")
     
     // Add the dependencies for Firebase products you want to use
     // When using the BoM, don't specify versions in Firebase dependencies
