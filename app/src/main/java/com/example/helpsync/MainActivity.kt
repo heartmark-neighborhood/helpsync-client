@@ -96,8 +96,8 @@ class MainActivity : ComponentActivity() {
             Log.d(TAG, "✅ Firebase initialized successfully")
             val auth = FirebaseAuth.getInstance()
             Log.d(TAG, "✅ FirebaseAuth instance created")
-            auth.signOut()
-            Log.d(TAG, "✅ Auto sign out on app startup")
+            // ログイン状態を保持するため、自動サインアウトを削除
+            Log.d(TAG, "✅ Preserving login state")
         } catch (e: Exception) {
             Log.e(TAG, "❌ Firebase initialization failed: ${e.message}", e)
         }
@@ -125,13 +125,101 @@ class MainActivity : ComponentActivity() {
 
                 var photoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
                 var selectedRole by rememberSaveable { mutableStateOf<String?>(null) }
+                var hasNavigatedOnStartup by rememberSaveable { mutableStateOf(false) }
 
-                val isSignedIn by remember { derivedStateOf { userViewModel.isSignedIn } }
-                LaunchedEffect(isSignedIn) {
-                    if (isSignedIn) {
-                        navController.navigate(AppScreen.RoleSelection.name) {
+                // アプリ起動時の自動ナビゲーション（既存ログイン時のみ）
+                LaunchedEffect(Unit) {
+                    // ユーザーデータの読み込みを待つ
+                    kotlinx.coroutines.delay(100)
+                    
+                    if (!hasNavigatedOnStartup && userViewModel.isSignedIn && userViewModel.currentUser != null) {
+                        Log.d(TAG, "🚀 Auto-navigation on startup (existing login)")
+                        Log.d(TAG, "User role: ${userViewModel.currentUser?.role}")
+                        Log.d(TAG, "User nickname: ${userViewModel.currentUser?.nickname}")
+                        
+                        val targetScreen = when {
+                            userViewModel.currentUser?.role.isNullOrEmpty() -> {
+                                Log.d(TAG, "→ Navigating to RoleSelection (no role)")
+                                AppScreen.RoleSelection.name
+                            }
+                            userViewModel.currentUser?.nickname.isNullOrEmpty() -> {
+                                Log.d(TAG, "→ Navigating to NicknameSetting (no nickname)")
+                                AppScreen.NicknameSetting.name
+                            }
+                            userViewModel.currentUser?.role == "supporter" -> {
+                                Log.d(TAG, "→ Navigating to SupporterHome")
+                                AppScreen.SupporterHome.name
+                            }
+                            userViewModel.currentUser?.role == "requester" -> {
+                                Log.d(TAG, "→ Navigating to HelpMarkHolderHome")
+                                AppScreen.HelpMarkHolderHome.name
+                            }
+                            else -> {
+                                Log.d(TAG, "→ Navigating to RoleSelection (default)")
+                                AppScreen.RoleSelection.name
+                            }
+                        }
+                        
+                        navController.navigate(targetScreen) {
                             popUpTo(AppScreen.SignIn.name) { inclusive = true }
                         }
+                        hasNavigatedOnStartup = true
+                    } else {
+                        Log.d(TAG, "No auto-navigation needed (not logged in or first time)")
+                    }
+                }
+
+                // ログイン成功時の処理（初回ログインと2回目以降の起動の両方に対応）
+                val isSignedIn by remember { derivedStateOf { userViewModel.isSignedIn } }
+                val currentUser by remember { derivedStateOf { userViewModel.currentUser } }
+                
+                LaunchedEffect(isSignedIn, currentUser) {
+                    // 初回ログイン時: hasNavigatedOnStartup = false
+                    // 2回目起動時: hasNavigatedOnStartup = false (起動時のLaunchedEffectで設定)
+                    Log.d(TAG, "LaunchedEffect triggered - isSignedIn: $isSignedIn, currentUser: ${currentUser?.email}, role: ${currentUser?.role}, nickname: ${currentUser?.nickname}")
+                    
+                    if (isSignedIn && currentUser != null) {
+                        // 既に起動時の自動ナビゲーションが完了している場合はスキップ
+                        if (hasNavigatedOnStartup) {
+                            Log.d(TAG, "⏭️ Skipping navigation (already navigated on startup)")
+                            return@LaunchedEffect
+                        }
+                        
+                        // ログイン成功時、適切な画面に遷移
+                        Log.d(TAG, "🔐 Login success, navigating to appropriate screen")
+                        Log.d(TAG, "User details - role: ${currentUser?.role}, nickname: ${currentUser?.nickname}")
+                        
+                        val targetScreen = when {
+                            currentUser?.role.isNullOrEmpty() -> {
+                                Log.d(TAG, "→ Target: RoleSelection (no role)")
+                                AppScreen.RoleSelection.name
+                            }
+                            currentUser?.nickname.isNullOrEmpty() -> {
+                                Log.d(TAG, "→ Target: NicknameSetting (no nickname)")
+                                AppScreen.NicknameSetting.name
+                            }
+                            currentUser?.role == "supporter" -> {
+                                Log.d(TAG, "→ Target: SupporterHome (supporter role)")
+                                AppScreen.SupporterHome.name
+                            }
+                            currentUser?.role == "requester" -> {
+                                Log.d(TAG, "→ Target: HelpMarkHolderHome (requester role)")
+                                AppScreen.HelpMarkHolderHome.name
+                            }
+                            else -> {
+                                Log.d(TAG, "→ Target: RoleSelection (default/unknown role: ${currentUser?.role})")
+                                AppScreen.RoleSelection.name
+                            }
+                        }
+                        
+                        Log.d(TAG, "Navigating to: $targetScreen")
+                        navController.navigate(targetScreen) {
+                            popUpTo(AppScreen.SignIn.name) { inclusive = true }
+                        }
+                        hasNavigatedOnStartup = true
+                        Log.d(TAG, "Navigation completed, hasNavigatedOnStartup set to true")
+                    } else {
+                        Log.d(TAG, "Not navigating - isSignedIn: $isSignedIn, currentUser is null: ${currentUser == null}")
                     }
                 }
 
@@ -142,28 +230,36 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable(AppScreen.SignIn.name) {
+                            // サインイン画面に戻った時、ナビゲーションフラグをリセット
+                            LaunchedEffect(Unit) {
+                                Log.d(TAG, "SignIn screen displayed, resetting hasNavigatedOnStartup")
+                                hasNavigatedOnStartup = false
+                            }
+                            
                             SignInScreen(
                                 onNavigateToSignUp = {
                                     navController.navigate(AppScreen.SignUp.name)
                                 },
                                 onSignInSuccess = {
-                                    navController.navigate(AppScreen.RoleSelection.name) {
-                                        popUpTo(AppScreen.SignIn.name) { inclusive = true }
-                                    }
+                                    // LaunchedEffectで自動遷移するため、ここでは何もしない
                                 },
                                 userViewModel = userViewModel
                             )
                         }
 
                         composable(AppScreen.SignUp.name) {
+                            // サインアップ画面でもナビゲーションフラグをリセット
+                            LaunchedEffect(Unit) {
+                                Log.d(TAG, "SignUp screen displayed, resetting hasNavigatedOnStartup")
+                                hasNavigatedOnStartup = false
+                            }
+                            
                             SignUpScreen(
                                 onNavigateToSignIn = {
                                     navController.navigate(AppScreen.SignIn.name)
                                 },
                                 onSignUpSuccess = {
-                                    navController.navigate(AppScreen.RoleSelection.name) {
-                                        popUpTo(AppScreen.SignUp.name) { inclusive = true }
-                                    }
+                                    // LaunchedEffectで自動遷移するため、ここでは何もしない
                                 },
                                 userViewModel = userViewModel
                             )
@@ -175,6 +271,7 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate(AppScreen.ProfileEdit.name)
                                 },
                                 onSignOut = {
+                                    hasNavigatedOnStartup = false
                                     navController.navigate(AppScreen.SignIn.name) {
                                         popUpTo(0) { inclusive = true }
                                     }
@@ -363,6 +460,11 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onCompleteClick = {
                                     navController.popBackStack()
+                                },
+                                onSignOut = {
+                                    navController.navigate(AppScreen.SignIn.name) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
                                 }
                             )
                         }

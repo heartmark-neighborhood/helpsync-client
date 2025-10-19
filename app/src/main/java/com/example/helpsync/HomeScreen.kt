@@ -97,7 +97,12 @@ fun MainScreen(
                     onPhotoChange = onPhotoChange,
                     onEditClick = { newNickname: String -> onNicknameChange(newNickname) },
                     onPhotoSave = { uri: Uri -> onPhotoSave(uri) },
-                    userViewModel = userViewModel
+                    userViewModel = userViewModel,
+                    onSignOut = {
+                        navController.navigate(AppScreen.SignIn.name) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 )
             }
 
