@@ -12,7 +12,7 @@ interface CloudMessageRepository {
     fun postCloudMessage(data: Map<String, String>)
 }
 
-class CloutMessageRepositoryImpl : CloudMessageRepository {
+class CloudMessageRepositoryImpl : CloudMessageRepository {
 
     private val _bleRequestMessageFlow = MutableSharedFlow<Map<String, String>>(
         extraBufferCapacity = 1,
