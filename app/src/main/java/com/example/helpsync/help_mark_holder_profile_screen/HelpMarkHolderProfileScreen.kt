@@ -208,22 +208,7 @@ fun HelpMarkHolderProfileScreen(
             .fillMaxSize()
     ) {
         // トップバー
-        TopAppBar(
-            title = {
-                Text(
-                    text = "プロフィール設定",
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            navigationIcon = {
-                IconButton(onClick = onBackClick) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "戻る")
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.White
-            )
-        )
+
         
         Column(
             modifier = Modifier
