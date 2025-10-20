@@ -4,8 +4,11 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.helpsync.repository.CloudMessageRepository
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.functions.ktx.functions
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -17,9 +20,31 @@ data class Evaluation(
     val rating: Int,
     val comment: String?
 )
-class HelpMarkHolderViewModel : ViewModel() {
+class HelpMarkHolderViewModel(
+    private val cloudMessageRepository: CloudMessageRepository
+) : ViewModel() {
+    private val _BleRequestUuid: MutableStateFlow<String?> = MutableStateFlow("string")
+    val BleRequestUuid: StateFlow<String?> = _BleRequestUuid
 
+    init {
+        viewModelScope.launch {
+            cloudMessageRepository.bleRequestMessageFlow
+                .collect { data ->
+                    handleFCMData(data)
+                }
+        }
+    }
     var requestId = mutableStateOf("")
+
+    fun handleFCMData(data: Map<String, String>)
+    {
+        when(data["action_type"]) {
+            "proximity-verification" -> {
+                _BleRequestUuid.value = data["proximityVerificationId"]
+            }
+        }
+    }
+
     fun callCreateHelpRequest(latitude: Double, longitude: Double) {
         viewModelScope.launch {
             try {
