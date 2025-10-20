@@ -23,13 +23,23 @@ data class Evaluation(
 class HelpMarkHolderViewModel(
     private val cloudMessageRepository: CloudMessageRepository
 ) : ViewModel() {
-    private val _BleRequestUuid: MutableStateFlow<String?> = MutableStateFlow("string")
-    val BleRequestUuid: StateFlow<String?> = _BleRequestUuid
+    private val _bleRequestUuid: MutableStateFlow<String?> = MutableStateFlow("string")
+    val bleRequestUuid: StateFlow<String?> = _bleRequestUuid
+
+    private val _helpRequestJson: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
+    val helpRequestJson: StateFlow<Map<String, String>?> = _helpRequestJson
 
     init {
         viewModelScope.launch {
             cloudMessageRepository.bleRequestMessageFlow
                 .collect { data ->
+                    handleFCMData(data)
+                }
+        }
+
+        viewModelScope.launch {
+            cloudMessageRepository.helpRequestMessageFlow
+                .collect {data ->
                     handleFCMData(data)
                 }
         }
@@ -40,7 +50,10 @@ class HelpMarkHolderViewModel(
     {
         when(data["action_type"]) {
             "proximity-verification" -> {
-                _BleRequestUuid.value = data["proximityVerificationId"]
+                _bleRequestUuid.value = data["proximityVerificationId"]
+            }
+            "help-request" -> {
+                _helpRequestJson.value = data
             }
         }
     }
