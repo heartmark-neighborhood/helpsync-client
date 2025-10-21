@@ -16,7 +16,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-
+        manifestPlaceholders["firebase_messaging_auto_init_enables"] = "true"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -60,6 +60,11 @@ dependencies {
     
     // Firebase - Import the Firebase BoM
     implementation(platform(libs.firebase.bom))
+
+    //koin
+    implementation("io.insert-koin:koin-core:4.1.0")
+    implementation("io.insert-koin:koin-android:4.1.0")
+    implementation("io.insert-koin:koin-androidx-viewmodel:4.1.0")
     
     // Add the dependencies for Firebase products you want to use
     // When using the BoM, don't specify versions in Firebase dependencies
@@ -67,7 +72,11 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
-    
+    implementation(libs.firebase.functions)
+    implementation(libs.firebase.messaging)
+
+    implementation(libs.firebase.functions.ktx)
+
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.7.0")
     
