@@ -44,13 +44,14 @@ class HelpMarkHolderViewModel(
                 }
         }
     }
-    var requestId = mutableStateOf("")
+    var helpRequestId = mutableStateOf("")
 
     fun handleFCMData(data: Map<String, String>)
     {
-        when(data["action_type"]) {
+        when(data["type"]) {
             "proximity-verification" -> {
                 _bleRequestUuid.value = data["proximityVerificationId"]
+
             }
             "help-request" -> {
                 _helpRequestJson.value = data
@@ -72,10 +73,10 @@ class HelpMarkHolderViewModel(
                 val responseData = callResult.data as? Map<String, Any>
                 val status = responseData?.get("status") as? String
                 val helpRequestIdResult = responseData?.get("helpRequestId") as? String
-                if(status != null) requestId.value = "$helpRequestIdResult"
+                if(status != null) helpRequestId.value = "$helpRequestIdResult"
 
             } catch(e: Exception){
-                requestId.value =  "Error ${e.message}"
+                helpRequestId.value =  "Error ${e.message}"
             }
         }
     }
@@ -100,7 +101,7 @@ class HelpMarkHolderViewModel(
                 val functions = Firebase.functions("asis-northeast2")
                 val evaluation = Evaluation(rating, comment)
                 val data = hashMapOf(
-                    "helpRequestId" to requestId.value,
+                    "helpRequestId" to helpRequestId.value,
                     "evaluation" to evaluation
                 )
                 val callResult = functions.getHttpsCallable("completeHelp").call(data).await()
