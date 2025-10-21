@@ -1,9 +1,11 @@
 package com.example.helpsync.viewmodel
 
 import android.util.Log
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.helpsync.repository.CloudMessageRepository
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.functions.ktx.functions
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,13 +24,46 @@ data class Evaluation(
 )
 
 class SupporterViewModel(
-
+    private val cloudMessageRepository: CloudMessageRepository
 ): ViewModel() {
-    var helpRequestId = mutableStateOf("")
+    var helpRequestId: MutableState<String?> = mutableStateOf("")
 
     private val _requesterProfile: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
     val requesterProfile: StateFlow<Map<String, String>?> = _requesterProfile
 
+    private val _bleRequestUuid: MutableStateFlow<String?> = MutableStateFlow("string")
+    val bleRequestUuid: StateFlow<String?> = _bleRequestUuid
+
+    private val _helpRequestJson: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
+    val helpRequestJson: StateFlow<Map<String, String>?> = _helpRequestJson
+
+    init {
+        viewModelScope.launch {
+            cloudMessageRepository.bleRequestMessageFlow
+                .collect {data ->
+                    handleFCMData(data)
+                }
+        }
+
+        viewModelScope.launch {
+            cloudMessageRepository.helpRequestMessageFlow
+                .collect {data ->
+                    handleFCMData(data)
+                }
+        }
+    }
+
+    fun handleFCMData(data: Map<String, String>) {
+        when(data["type"]) {
+            "proximity-verification" -> {
+                _bleRequestUuid.value = data["proximityVerificationId"]
+                helpRequestId.value = data["helpRequestId"]
+            }
+            "help-request" -> {
+                _helpRequestJson.value = data
+            }
+        }
+    }
     fun callNotifyProximityVerificationResult(scanResult: Boolean) {
         viewModelScope.launch {
             try {
