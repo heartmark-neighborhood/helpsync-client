@@ -36,7 +36,8 @@ fun SupporterScreen(
     photoUri: Uri?,
     onPhotoChange: (Uri?) -> Unit,
     onPhotoSave: (Uri) -> Unit = {},
-    userViewModel: UserViewModel
+    userViewModel: UserViewModel,
+    onSignOut: () -> Unit = {}
 ) {
     val tabNavController = rememberNavController()
     val currentDestination by tabNavController.currentBackStackEntryAsState()
@@ -83,13 +84,10 @@ fun SupporterScreen(
                     onNicknameChange = {},
                     photoUri = photoUri,
                     onPhotoChange = onPhotoChange,
-                    onEditClick = { newNickname: String ->
-                        onNicknameChange(newNickname)
-                    },
-                    onPhotoSave = { uri: Uri ->
-                        onPhotoSave(uri)
-                    },
-                    userViewModel = userViewModel
+                    onEditClick = { newNickname: String -> onNicknameChange(newNickname) },
+                    onPhotoSave = { uri: Uri -> onPhotoSave(uri) },
+                    userViewModel = userViewModel,
+                    onSignOut = onSignOut
                 )
             }
 
