@@ -29,7 +29,7 @@ import java.util.UUID
 class BLEScanner() : Service() {
     private val SCAN_DURATION_MS = 18_000L
     private val CHANNEL_ID = "ble_scan_channel"
-    private lateinit var scanner : BluetoothLeScanner
+    private lateinit var scanner: BluetoothLeScanner
     private var handler: Handler? = null
 
     private var scanCallback: ScanCallback? = null
@@ -49,8 +49,9 @@ class BLEScanner() : Service() {
         startScan(serviceUuid)
         return START_STICKY
     }
+
     fun startScan(serviceUuid: UUID) {
-        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
             != PackageManager.PERMISSION_GRANTED
         ) {
             Log.w("BLE", "permission denied")
@@ -62,13 +63,11 @@ class BLEScanner() : Service() {
                 val data = result.scanRecord?.getServiceData(ParcelUuid(serviceUuid))
                 val msg = data?.toString(Charsets.UTF_8)
                 val intent = Intent("com.example.SCAN_RESULT")
-                if(msg != null) {
+                if (msg != null) {
                     intent.setPackage(context.packageName)
                     intent.putExtra("result", true)
                     sendBroadcast(intent)
-                }
-                else
-                {
+                } else {
                     intent.setPackage(context.packageName)
                     intent.putExtra("result", false)
                     sendBroadcast(intent)
@@ -103,7 +102,7 @@ class BLEScanner() : Service() {
 
     fun stopScan() {
         scanCallback?.let {
-            if(ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
                 == PackageManager.PERMISSION_GRANTED
             ) {
                 scanner.stopScan(it)
@@ -112,8 +111,7 @@ class BLEScanner() : Service() {
     }
 
     override fun onDestroy() {
-        if(checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED)
-        {
+        if (checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
             scanner.stopScan(scanCallback)
         }
         super.onDestroy()
