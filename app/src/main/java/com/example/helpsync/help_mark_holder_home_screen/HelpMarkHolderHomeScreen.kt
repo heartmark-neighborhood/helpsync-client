@@ -28,6 +28,7 @@ import com.example.helpsync.viewmodel.UserViewModel
 fun HelpMarkHolderHomeScreen(
     viewModel: UserViewModel,
     onMatchingStarted: () -> Unit
+    callviewModel : HelpMarkHolderViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val helpRequest by viewModel.activeHelpRequest.collectAsState()
@@ -89,7 +90,7 @@ fun HelpMarkHolderHomeScreen(
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { viewModel.createHelpRequest() },
+                onClick = { callviewModel.callCreateHelpRequest() },
                 modifier = Modifier.size(200.dp),
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
