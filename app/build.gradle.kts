@@ -67,7 +67,7 @@ dependencies {
     //koin
     implementation("io.insert-koin:koin-core:4.1.0")
     implementation("io.insert-koin:koin-android:4.1.0")
-    implementation("io.insert-koin:koin-androidx-viewmodel:4.1.0")
+    implementation("io.insert-koin:koin-androidx-compose:4.1.0")
     
     // Add the dependencies for Firebase products you want to use
     // When using the BoM, don't specify versions in Firebase dependencies

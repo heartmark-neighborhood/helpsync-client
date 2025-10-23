@@ -11,6 +11,8 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import com.google.firebase.Timestamp
@@ -54,7 +56,13 @@ class UserRepository {
     suspend fun signUp(email: String, password: String): Result<FirebaseUser> {
         return try {
             Log.d(TAG, "Starting sign up for email: $email")
-            val result = auth.createUserWithEmailAndPassword(email, password).await()
+            Log.d(TAG, "About to call createUserWithEmailAndPassword")
+            
+            val result = withTimeout(30000) { // 30秒のタイムアウト
+                auth.createUserWithEmailAndPassword(email, password).await()
+            }
+            
+            Log.d(TAG, "createUserWithEmailAndPassword completed")
             result.user?.let { user ->
                 Log.d(TAG, "Sign up successful for user: ${user.uid}")
                 Result.success(user)
@@ -62,6 +70,9 @@ class UserRepository {
                 Log.e(TAG, "Sign up failed: User is null")
                 Result.failure(Exception("User creation failed"))
             }
+        } catch (e: TimeoutCancellationException) {
+            Log.e(TAG, "Sign up timeout: Request took longer than 30 seconds", e)
+            Result.failure(Exception("リクエストがタイムアウトしました。ネットワーク接続を確認してください。"))
         } catch (e: Exception) {
             Log.e(TAG, "Sign up error: ${e.message}", e)
             Result.failure(e)

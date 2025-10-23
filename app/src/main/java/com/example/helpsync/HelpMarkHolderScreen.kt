@@ -27,7 +27,8 @@ enum class HelpMarkHolderScreenTab(
 @Composable
 fun HelpMarkHolderScreen(
     mainNavController: NavHostController, // MainActivityのNavController
-    userViewModel: UserViewModel
+    userViewModel: UserViewModel,
+    onSignOut: () -> Unit = {}
 ) {
     // タブ内ナビゲーション用のNavController
     val tabNavController = rememberNavController()
@@ -79,6 +80,12 @@ fun HelpMarkHolderScreen(
                         tabNavController.navigate(HelpMarkHolderScreenTab.Home.route) {
                             // popUpToでProfile画面をバックスタックから削除
                             popUpTo(HelpMarkHolderScreenTab.Home.route) { inclusive = true }
+                        }
+                    },
+                    onSignOut = {
+                        onSignOut()
+                        mainNavController.navigate(AppScreen.SignIn.name) {
+                            popUpTo(0) { inclusive = true }
                         }
                     }
                 )

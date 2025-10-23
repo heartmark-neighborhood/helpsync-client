@@ -4,6 +4,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -43,6 +44,7 @@ fun HelpMarkHolderProfileScreen(
     onBackClick: () -> Unit = {},
     onCompleteClick: () -> Unit = {},
     onPhotoSave: (Uri) -> Unit = {},
+    onSignOut: () -> Unit = {},
     userViewModel: UserViewModel = viewModel()
 ) {
     // ローカルで状態を管理
@@ -57,6 +59,7 @@ fun HelpMarkHolderProfileScreen(
     val currentUser = userViewModel.currentUser
     val isLoading = userViewModel.isLoading
     val errorMessage = userViewModel.errorMessage
+    val firebaseUser = userViewModel.getCurrentFirebaseUser()
     
     // Contextを取得（Composable関数内でのみ可能）
     val context = LocalContext.current
@@ -208,7 +211,22 @@ fun HelpMarkHolderProfileScreen(
             .fillMaxSize()
     ) {
         // トップバー
-
+        TopAppBar(
+            title = {
+                Text(
+                    text = "プロフィール設定",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            navigationIcon = {
+                IconButton(onClick = onBackClick) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "戻る")
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.White
+            )
+        )
         
         Column(
             modifier = Modifier
@@ -218,7 +236,6 @@ fun HelpMarkHolderProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 認証状態のチェック
-            val firebaseUser = userViewModel.getCurrentFirebaseUser()
             if (firebaseUser == null) {
                 // 認証されていない場合の警告表示
                 Card(
@@ -554,6 +571,30 @@ fun HelpMarkHolderProfileScreen(
                         color = Color(0xFFD32F2F),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+            
+            if (firebaseUser != null) {
+                Spacer(modifier = Modifier.height(32.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        Log.d("HelpMarkHolderProfileScreen", "Sign out button clicked")
+                        userViewModel.signOut()
+                        onSignOut()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFFD32F2F)
+                    ),
+                    border = BorderStroke(1.dp, Color(0xFFD32F2F)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "サインアウト",
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }

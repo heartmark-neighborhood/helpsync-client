@@ -3,7 +3,7 @@ package com.example.helpsync
 import android.app.Application
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
-import com.example.myapp.di.appModule
+import com.example.helpsync.DI.appModule
 
 class CustomApplication : Application() {
     override fun onCreate() {
