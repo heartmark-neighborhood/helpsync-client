@@ -110,8 +110,11 @@ class UserViewModel : ViewModel() {
                     userRepository.createUser(firebaseUser.uid, user)
                         .onSuccess {
                             Log.d(TAG, "✅ User document created successfully")
+                            // currentUserを先に設定
                             currentUser = user
+                            // 最後にisSignedInをtrueにする（これでMainActivityのLaunchedEffectが発火）
                             isSignedIn = true
+                            isLoading = false
                         }
                         .onFailure { error ->
                             Log.e(TAG, "❌ Failed to create user document: ${error.message}")
@@ -127,15 +130,15 @@ class UserViewModel : ViewModel() {
                             """.trimIndent()
 
                             errorMessage = detailedError
+                            isLoading = false
                         }
                 }
                 .onFailure { error ->
                     Log.e(TAG, "Authentication failed: ${error.message}")
                     isSignedIn = false
                     errorMessage = error.message
+                    isLoading = false
                 }
-
-            isLoading = false
         }
     }
 
@@ -155,9 +158,8 @@ class UserViewModel : ViewModel() {
                     Log.e(TAG, "❌ SignIn failed: ${error.message}")
                     isSignedIn = false
                     errorMessage = error.message
+                    isLoading = false
                 }
-
-            isLoading = false
         }
     }
 
@@ -180,13 +182,13 @@ class UserViewModel : ViewModel() {
                 .onSuccess { user ->
                     Log.d(TAG, "✅ User data loaded successfully: $user")
                     currentUser = user
+                    isLoading = false
                 }
                 .onFailure { error ->
                     Log.e(TAG, "❌ Failed to load user data: ${error.message}")
                     errorMessage = error.message
+                    isLoading = false
                 }
-
-            isLoading = false
         }
     }
 

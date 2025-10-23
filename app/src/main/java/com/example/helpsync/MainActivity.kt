@@ -158,8 +158,8 @@ class MainActivity : ComponentActivity() {
                                 AppScreen.SupporterHome.name
                             }
                             userViewModel.currentUser?.role == "requester" -> {
-                                Log.d(TAG, "→ Navigating to HelpMarkHolderHome")
-                                AppScreen.HelpMarkHolderHome.name
+                                Log.d(TAG, "→ Navigating to HelpMarkHolderScreen")
+                                AppScreen.HelpMarkHolderScreen.name
                             }
                             else -> {
                                 Log.d(TAG, "→ Navigating to RoleSelection (default)")
@@ -210,8 +210,8 @@ class MainActivity : ComponentActivity() {
                                 AppScreen.SupporterHome.name
                             }
                             currentUser?.role == "requester" -> {
-                                Log.d(TAG, "→ Target: HelpMarkHolderHome (requester role)")
-                                AppScreen.HelpMarkHolderHome.name
+                                Log.d(TAG, "→ Target: HelpMarkHolderScreen (requester role)")
+                                AppScreen.HelpMarkHolderScreen.name
                             }
                             else -> {
                                 Log.d(TAG, "→ Target: RoleSelection (default/unknown role: ${currentUser?.role})")
@@ -232,10 +232,7 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = navController,
-                        startDestination = if (userViewModel.getCurrentFirebaseUser() != null)
-                            AppScreen.RoleSelection.name
-                        else
-                            AppScreen.SignIn.name,
+                        startDestination = AppScreen.SignIn.name,
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         // --- 認証フロー ---
@@ -294,7 +291,10 @@ class MainActivity : ComponentActivity() {
                         composable(AppScreen.HelpMarkHolderScreen.name) {
                             HelpMarkHolderScreen(
                                 mainNavController = navController,
-                                userViewModel = userViewModel
+                                userViewModel = userViewModel,
+                                onSignOut = {
+                                    hasNavigatedOnStartup = false
+                                }
                             )
                         }
 
@@ -469,6 +469,12 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate(AppScreen.HelpMarkHolderScreen.name) {
                                         popUpTo(AppScreen.RoleSelection.name) { inclusive = false }
                                     }
+                                },
+                                onSignOut = {
+                                    hasNavigatedOnStartup = false
+                                    navController.navigate(AppScreen.SignIn.name) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
                                 }
                             )
                         }
@@ -538,6 +544,12 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onCompleteClick = {
                                     navController.popBackStack()
+                                },
+                                onSignOut = {
+                                    hasNavigatedOnStartup = false
+                                    navController.navigate(AppScreen.SignIn.name) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
                                 }
                             )
                         }

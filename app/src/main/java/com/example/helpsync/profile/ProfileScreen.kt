@@ -223,6 +223,31 @@ fun ProfileScreen(
             }
         }
         
+        if (user != null) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = {
+                    userViewModel.signOut()
+                    onSignOut()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ExitToApp,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("サインアウト")
+            }
+        }
+
         // エラーメッセージ表示
         userViewModel.errorMessage?.let { error ->
             Card(

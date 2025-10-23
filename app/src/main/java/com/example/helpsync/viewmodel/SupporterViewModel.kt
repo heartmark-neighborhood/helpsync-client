@@ -5,6 +5,8 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.helpsync.data.Location
+import com.example.helpsync.data.Evaluation
 import com.example.helpsync.repository.CloudMessageRepository
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.functions.ktx.functions
@@ -12,16 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-
-data class Location(
-    val latitude: Double,
-    val longtitude: Double
-)
-
-data class Evaluation(
-    val rating: Int,
-    val comment: Double
-)
 
 class SupporterViewModel(
     private val cloudMessageRepository: CloudMessageRepository
