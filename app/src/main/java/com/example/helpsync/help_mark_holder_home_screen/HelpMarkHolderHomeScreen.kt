@@ -90,7 +90,7 @@ fun HelpMarkHolderHomeScreen(
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { callviewModel.callCreateHelpRequest() },
+                onClick = { callviewModel.callCreateHelpRequest(latitude: ido, longitude: keido) },
                 modifier = Modifier.size(200.dp),
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
