@@ -39,7 +39,6 @@ import com.example.helpsync.role_selection_screen.RoleSelectionScreen
 import com.example.helpsync.role_selection_screen.RoleType
 import com.example.helpsync.settings_screen.SettingsScreen
 import com.example.helpsync.supporter_home_screen.SupporterHomeScreen
-import com.example.helpsync.support_details_confirmation_screen.SupportDetailsConfirmationScreen
 import com.example.helpsync.ui.theme.HelpSyncTheme
 import com.example.helpsync.viewmodel.UserViewModel
 import com.google.firebase.FirebaseApp
@@ -366,21 +365,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        composable(
-                            route = "${AppScreen.SupportDetailsConfirmation.name}/{requestId}",
-                            arguments = listOf(navArgument("requestId") { type = NavType.StringType })
-                        ) { backStackEntry ->
-                            val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
-                            SupportDetailsConfirmationScreen(
-                                requestId = requestId,
-                                viewModel = userViewModel,
-                                onDoneClick = {
-                                    navController.navigate(AppScreen.SupporterHome.name) {
-                                        popUpTo(AppScreen.SupportDetailsConfirmation.name) { inclusive = true }
-                                    }
-                                }
-                            )
-                        }
+
 
                         // --- 共通画面 ---
                         composable(AppScreen.Settings.name) {

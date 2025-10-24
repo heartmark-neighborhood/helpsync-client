@@ -12,8 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
@@ -175,8 +174,8 @@ fun HelpMarkHolderProfileScreen(
                 // ファイル種別を内容から推測
                 val fileTypeFromContent = when {
                     buffer.size >= 2 && buffer[0] == 0xFF.toByte() && buffer[1] == 0xD8.toByte() -> "JPEG"
-                    buffer.size >= 8 && buffer[1] == 'P'.toByte() && buffer[2] == 'N'.toByte() && buffer[3] == 'G'.toByte() -> "PNG"
-                    buffer.size >= 12 && buffer[8] == 'W'.toByte() && buffer[9] == 'E'.toByte() && buffer[10] == 'B'.toByte() && buffer[11] == 'P'.toByte() -> "WEBP"
+                    buffer.size >= 8 && buffer[1] == 'P'.code.toByte() && buffer[2] == 'N'.code.toByte() && buffer[3] == 'G'.code.toByte() -> "PNG"
+                    buffer.size >= 12 && buffer[8] == 'W'.code.toByte() && buffer[9] == 'E'.code.toByte() && buffer[10] == 'B'.code.toByte() && buffer[11] == 'P'.code.toByte() -> "WEBP"
                     else -> "UNKNOWN"
                 }
                 android.util.Log.d("HelpMarkHolderProfileScreen", "🎯 Content-based file type: $fileTypeFromContent")
@@ -220,7 +219,7 @@ fun HelpMarkHolderProfileScreen(
             },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "戻る")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(

@@ -119,6 +119,7 @@ fun SupporterHomeScreen(
         helpRequestJson?.let {
             Log.d("SupporterHome", "Received help request details, navigating...")
             onNavigateToAcceptance(expectedRequestId ?: "")
+            viewModel.clearViewedRequest()
         }
     }
 

@@ -1,6 +1,7 @@
 package com.example.helpsync
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
@@ -14,7 +15,6 @@ import androidx.navigation.compose.*
 import com.example.helpsync.request_acceptance_screen.RequestAcceptanceScreen
 import com.example.helpsync.supporter_home_screen.SupporterHomeScreen
 import com.example.helpsync.supporter_setting_screen.SupporterSettingScreen
-import com.example.helpsync.support_details_confirmation_screen.SupportDetailsConfirmationScreen
 import com.example.helpsync.viewmodel.UserViewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
@@ -76,7 +76,11 @@ fun SupporterScreen(
                 SupporterHomeScreen(
                     viewModel = supporterViewModel,
                     onNavigateToAcceptance = { requestId ->
-                        tabNavController.navigate("main/request_acceptance/$requestId")
+                        if (requestId.isNotEmpty()) {
+                            tabNavController.navigate("main/matched_detail/$requestId")
+                        } else {
+                            Log.e("SupporterScreen", "Cannot navigate, requestId is empty!")
+                        }
                     }
                 )
             }
@@ -95,7 +99,7 @@ fun SupporterScreen(
             }
 
             composable(
-                route = "main/request_acceptance/{requestId}",
+                route = "main/matched_detail/{requestId}",
                 arguments = listOf(navArgument("requestId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
@@ -110,42 +114,22 @@ fun SupporterScreen(
 
                 if (request != null) {
                     RequestAcceptanceScreen(
-                        viewModel = supporterViewModel,
-                        nickname = request!!.requesterNickname,
-                        content = "支援を求めています",
-                        onNavigateToDetail = { acceptedRequestId ->
-                            tabNavController.navigate("main/request_detail/$acceptedRequestId")
-                        },
-                        onAcceptClick = {
-                            tabNavController.navigate("main/request_detail/$requestId")
-                        },
-                        onCancelClick = {
-                            userViewModel.clearViewedRequest()
-                            tabNavController.popBackStack()
+                        viewModel = supporterViewModel, // 正しい ViewModel を渡す
+                        onDoneClick = { // ★ 完了ボタンが押されたときの処理
+                            // ViewModelのデータをクリア (任意だが推奨)
+                            supporterViewModel.clearViewedRequest() // ViewModelにこの関数が必要
+                            // ホームタブに戻る
+                            tabNavController.navigate(MainScreenTab.Home.route) {
+                                // 現在の画面 (matched_detail) をスタックから削除
+                                popUpTo(tabNavController.graph.startDestinationId) { inclusive = false } // ホームまで戻る
+                                launchSingleTop = true
+                            }
                         }
                     )
                 } else {
                     CircularProgressIndicator()
                 }
             }
-
-            // --- ▼▼▼ 修正箇所 ▼▼▼ ---
-            composable(
-                route = "main/request_detail/{requestId}",
-                arguments = listOf(navArgument("requestId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
-
-                SupportDetailsConfirmationScreen(
-                    requestId = requestId,
-                    viewModel = userViewModel,
-                    onDoneClick = {
-                        userViewModel.clearViewedRequest()
-                        tabNavController.popBackStack(MainScreenTab.Home.route, inclusive = false)
-                    }
-                )
-            }
-            // --- ▲▲▲ 修正箇所ここまで ▲▲▲ ---
         }
     }
 }
