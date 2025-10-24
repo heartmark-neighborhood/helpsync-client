@@ -33,7 +33,6 @@ fun HelpMarkHolderHomeScreen(
     val helpRequest by viewModel.activeHelpRequest.collectAsState()
     val isLoading by remember { derivedStateOf { viewModel.isLoading } }
 
-    // ★ 変更点1: Advertiserのインスタンスを保持するstateを定義
     var bleAdvertiser by remember { mutableStateOf<BLEAdvertiser?>(null) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -57,11 +56,9 @@ fun HelpMarkHolderHomeScreen(
     LaunchedEffect(helpRequest) {
         val currentRequest = helpRequest
         if (currentRequest != null && currentRequest.status == RequestStatus.PENDING) {
-            // ★ 変更点2: リクエスト成功後にUUIDを使ってAdvertiserを生成
             val advertiser = BLEAdvertiser(context, currentRequest.proximityUuid)
-            bleAdvertiser = advertiser // stateにインスタンスを保存
+            bleAdvertiser = advertiser
 
-            // ★ 変更点3: 新しいstartAdvertise関数を呼び出す
             advertiser.startAdvertise(
                 message = currentRequest.id
             ) { status ->
@@ -74,7 +71,6 @@ fun HelpMarkHolderHomeScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            // ★ 変更点4: stateに保存したAdvertiserを停止
             bleAdvertiser?.stopAdvertise()
         }
     }

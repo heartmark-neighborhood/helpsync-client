@@ -18,18 +18,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.helpsync.viewmodel.SupporterViewModel
+import android.util.Log
+
 
 @SuppressLint("DefaultLocale")
 @Composable
 fun RequestAcceptanceScreen(
-    // ✅ 引数を現在の仕様に合わせます
     nickname: String,
     content: String,
     onAcceptClick: () -> Unit,
-    onCancelClick: () -> Unit
+    onCancelClick: () -> Unit,
+    viewModel: SupporterViewModel = viewModel(),
+    onNavigateToDetail: (String) -> Unit
 ) {
     var time by remember { mutableIntStateOf(60) }
-
+    val helpRequestJson by viewModel.helpRequestJson.collectAsState()
+    var requesterNickname by remember { mutableStateOf<String?>(null) }
+    var requesterUrl by remember { mutableStateOf<String?>(null) }
+    var requestermessage by remember { mutableStateOf<String?>(null) }
     // タイマー処理：0秒になったら前の画面へ戻る
     LaunchedEffect(Unit) {
         while (time > 0) {
@@ -38,6 +46,42 @@ fun RequestAcceptanceScreen(
         }
         // ✅ onCancelClickを呼び出して戻る
         onCancelClick()
+    }
+
+    LaunchedEffect(helpRequestJson) {
+        helpRequestJson?.let { data ->
+            Log.d("AcceptanceScreen", "📄 Received help request details: $data")
+            requesterNickname = data["requesterNickname"]
+            requesterUrl = data["requesterUrl"]
+            requestermessage = data["requesterMessage"]
+
+        }
+    }
+
+    if (requesterNickname != null) {
+        Column {
+            Text("以下のヘルプ要請がありました：")
+            Text("ニックネーム: $requesterNickname")
+            Text("アイコンURL: $requesterUrl")
+            Text("メッセージ: $requestermessage")
+            Row {
+                Button(onClick = {
+                    Log.d("AcceptanceScreen", "👍 Accepting request...")
+                    viewModel.callRespondToHelpRequest(request_response = true)
+                    // ★ 成功した場合、ViewModelのrequesterProfileが更新されるのを待って遷移
+                    // (次のステップで解説)
+                }) { Text("承認") }
+                Button(onClick = {
+                    Log.d("AcceptanceScreen", "👎 Declining request...")
+                    viewModel.callRespondToHelpRequest(request_response = false)
+                    // 拒否したら前の画面に戻るなどの処理
+                }) { Text("拒否") }
+            }
+        }
+    } else {
+        // データ受信待ちの表示
+        CircularProgressIndicator()
+        Text("ヘルプ要求の詳細を受信中...")
     }
 
     Surface(

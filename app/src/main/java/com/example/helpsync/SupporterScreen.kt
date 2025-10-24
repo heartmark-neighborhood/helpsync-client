@@ -18,6 +18,8 @@ import com.example.helpsync.support_details_confirmation_screen.SupportDetailsCo
 import com.example.helpsync.viewmodel.UserViewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.helpsync.viewmodel.SupporterViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 enum class MainScreenTab(
     val icon: ImageVector,
@@ -25,7 +27,7 @@ enum class MainScreenTab(
     val route: String
 ) {
     Home(Icons.Outlined.Home, "ホーム", "main/home"),
-    Settings(Icons.Outlined.Settings, "設定", "main/settings")
+    profile(Icons.Outlined.Settings, "プロフィール", "main/profile")
 }
 
 @Composable
@@ -42,6 +44,7 @@ fun SupporterScreen(
     val tabNavController = rememberNavController()
     val currentDestination by tabNavController.currentBackStackEntryAsState()
     val currentRoute = currentDestination?.destination?.route
+    val supporterViewModel: SupporterViewModel = viewModel()
 
     Scaffold(
         bottomBar = {
@@ -71,14 +74,14 @@ fun SupporterScreen(
         ) {
             composable(MainScreenTab.Home.route) {
                 SupporterHomeScreen(
-                    viewModel = userViewModel,
+                    viewModel = supporterViewModel,
                     onNavigateToAcceptance = { requestId ->
                         tabNavController.navigate("main/request_acceptance/$requestId")
                     }
                 )
             }
 
-            composable(MainScreenTab.Settings.route) {
+            composable(MainScreenTab.profile.route) {
                 SupporterSettingScreen(
                     nickname = nickname,
                     onNicknameChange = {},
@@ -107,8 +110,12 @@ fun SupporterScreen(
 
                 if (request != null) {
                     RequestAcceptanceScreen(
+                        viewModel = supporterViewModel,
                         nickname = request!!.requesterNickname,
                         content = "支援を求めています",
+                        onNavigateToDetail = { acceptedRequestId ->
+                            tabNavController.navigate("main/request_detail/$acceptedRequestId")
+                        },
                         onAcceptClick = {
                             tabNavController.navigate("main/request_detail/$requestId")
                         },
