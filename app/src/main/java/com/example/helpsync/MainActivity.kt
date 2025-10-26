@@ -40,6 +40,8 @@ import com.example.helpsync.support_details_confirmation_screen.SupportDetailsCo
 import com.example.helpsync.ui.theme.HelpSyncTheme
 import com.example.helpsync.viewmodel.HelpMarkHolderViewModel
 import com.example.helpsync.viewmodel.UserViewModel
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.serialization.Serializable
@@ -69,6 +71,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private lateinit var bleReceiver: BLEScanReceiver
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -90,6 +93,8 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         try {
             FirebaseApp.initializeApp(this)
@@ -292,6 +297,7 @@ class MainActivity : ComponentActivity() {
                             HelpMarkHolderScreen(
                                 mainNavController = navController,
                                 userViewModel = userViewModel,
+                                locationClient = fusedLocationClient,
                                 onSignOut = {
                                     hasNavigatedOnStartup = false
                                 }
@@ -458,7 +464,8 @@ class MainActivity : ComponentActivity() {
                                 onMatchingStarted = {
                                     navController.navigate(AppScreen.HelpMarkHolderMatching.name)
                                 },
-                                helpMarkHolderViewModel = helpMarkHolderViewModel
+                                helpMarkHolderViewModel = helpMarkHolderViewModel,
+                                locationClient = fusedLocationClient
                             )
                         }
 

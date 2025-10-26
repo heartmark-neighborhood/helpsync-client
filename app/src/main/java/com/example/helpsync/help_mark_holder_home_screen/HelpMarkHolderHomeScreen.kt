@@ -2,6 +2,8 @@ package com.example.helpsync.help_mark_holder_home_screen
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import android.location.Location
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -19,17 +21,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.content.PackageManagerCompat
 import com.example.helpsync.bleadvertiser.BLEAdvertiser
 import com.example.helpsync.data.RequestStatus
 import com.example.helpsync.viewmodel.HelpMarkHolderViewModel
 import com.example.helpsync.viewmodel.UserViewModel
+import com.google.android.gms.location.CurrentLocationRequest
+import com.google.android.gms.location.FusedLocationProviderClient
 
 @SuppressLint("NewApi")
 @Composable
 fun HelpMarkHolderHomeScreen(
     userViewModel: UserViewModel,
     onMatchingStarted: () -> Unit,
-    helpMarkHolderViewModel : HelpMarkHolderViewModel
+    helpMarkHolderViewModel : HelpMarkHolderViewModel,
+    locationClient: FusedLocationProviderClient
 ) {
     val context = LocalContext.current
     val helpRequest by userViewModel.activeHelpRequest.collectAsState()
@@ -91,7 +98,36 @@ fun HelpMarkHolderHomeScreen(
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { helpMarkHolderViewModel.callCreateHelpRequest(0.0, 0.0) },
+                onClick = {
+                    when {
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED -> {
+                            Log.d("HelpMarkHolderHomeScreen", "Permission already granted, fetching location...")
+                            val request = CurrentLocationRequest.Builder()
+                                .setPriority(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY)
+                                .setDurationMillis(5000)
+                                .build()
+                            locationClient.getCurrentLocation(request, null)
+                                .addOnSuccessListener { location: Location? ->
+                                    val lat = location?.latitude ?: 0.0
+                                    val lon = location?.longitude ?: 0.0
+
+                                    Log.d("LocationClient", "Location acquired: $lat, $lon")
+                                    helpMarkHolderViewModel.callCreateHelpRequest(lat, lon)
+                                }
+                        }
+
+                        //`ActivityCompat.shouldShowRequestPermissionRationale()`であれそれするのも良さげ
+
+                        else -> {
+                            // 権限がない場合、パーミッションリクエストを起動
+                            Log.d("LocationButton", "Permission not granted, launching request...")
+                            permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
+                        }
+                    }
+                },
                 modifier = Modifier.size(200.dp),
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
