@@ -163,7 +163,7 @@ fun HelpMarkHolderMatchingCompleteScreen(
             OutlinedButton(
                 onClick = {
                     helpMarkHolderViewModel.callCompleteHelp(5, "thank you!");
-                    onHomeClick;
+                    onHomeClick();
                 },
                 modifier = Modifier
                     .fillMaxWidth()
