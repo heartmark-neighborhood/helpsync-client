@@ -21,21 +21,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.helpsync.viewmodel.HelpMarkHolderViewModel
 import com.example.helpsync.viewmodel.UserViewModel
 
 // この画面はViewModelから直接データを取得するため、引数のdata classは不要になります
 @Composable
 fun HelpMarkHolderMatchingCompleteScreen(
     requestId: String,
-    viewModel: UserViewModel,
+    userViewModel: UserViewModel,
+    helpMarkHolderViewModel: HelpMarkHolderViewModel,
     onHomeClick: () -> Unit = {}
 ) {
-    val supporterProfile by viewModel.supporterProfile.collectAsState()
+    val supporterProfile by userViewModel.supporterProfile.collectAsState()
     val scaleAnimation = remember { Animatable(0f) }
 
     // 画面が表示されたときに、指定されたrequestIdの詳細を読み込む
     LaunchedEffect(requestId) {
-        viewModel.loadMatchedRequestDetails(requestId)
+        userViewModel.loadMatchedRequestDetails(requestId)
         scaleAnimation.animateTo(
             targetValue = 1f,
             animationSpec = spring(
@@ -48,7 +50,7 @@ fun HelpMarkHolderMatchingCompleteScreen(
     // 画面から離れるときにViewModelのデータをクリアする
     DisposableEffect(Unit) {
         onDispose {
-            viewModel.clearMatchedDetails()
+            userViewModel.clearMatchedDetails()
         }
     }
 
@@ -160,7 +162,7 @@ fun HelpMarkHolderMatchingCompleteScreen(
 
             OutlinedButton(
                 onClick = {
-                    callviewModel.callCompleteHelp();
+                    helpMarkHolderViewModel.callCompleteHelp(5, "thank you!");
                     onHomeClick;
                 },
                 modifier = Modifier

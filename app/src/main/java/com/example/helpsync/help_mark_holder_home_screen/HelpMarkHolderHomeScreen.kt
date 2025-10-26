@@ -21,18 +21,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.helpsync.bleadvertiser.BLEAdvertiser
 import com.example.helpsync.data.RequestStatus
+import com.example.helpsync.viewmodel.HelpMarkHolderViewModel
 import com.example.helpsync.viewmodel.UserViewModel
 
 @SuppressLint("NewApi")
 @Composable
 fun HelpMarkHolderHomeScreen(
-    viewModel: UserViewModel,
-    onMatchingStarted: () -> Unit
-    callviewModel : HelpMarkHolderViewModel = viewModel()
+    userViewModel: UserViewModel,
+    onMatchingStarted: () -> Unit,
+    helpMarkHolderViewModel : HelpMarkHolderViewModel
 ) {
     val context = LocalContext.current
-    val helpRequest by viewModel.activeHelpRequest.collectAsState()
-    val isLoading by remember { derivedStateOf { viewModel.isLoading } }
+    val helpRequest by userViewModel.activeHelpRequest.collectAsState()
+    val isLoading by remember { derivedStateOf { userViewModel.isLoading } }
 
     // ★ 変更点1: Advertiserのインスタンスを保持するstateを定義
     var bleAdvertiser by remember { mutableStateOf<BLEAdvertiser?>(null) }
@@ -90,7 +91,7 @@ fun HelpMarkHolderHomeScreen(
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { callviewModel.callCreateHelpRequest(latitude: ido, longitude: keido) },
+                onClick = { helpMarkHolderViewModel.callCreateHelpRequest(0.0, 0.0) },
                 modifier = Modifier.size(200.dp),
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
