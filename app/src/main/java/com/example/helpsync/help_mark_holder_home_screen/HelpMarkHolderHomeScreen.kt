@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.example.helpsync.bleadvertiser.BLEAdvertiser
 import com.example.helpsync.data.RequestStatus
 import com.example.helpsync.viewmodel.UserViewModel
+import com.example.helpsync.viewmodel.HelpMarkHolderViewModel
 
 @SuppressLint("NewApi")
 @Composable
@@ -33,6 +34,7 @@ fun HelpMarkHolderHomeScreen(
     val context = LocalContext.current
     val helpRequest by viewModel.activeHelpRequest.collectAsState()
     val isLoading by remember { derivedStateOf { viewModel.isLoading } }
+    val bleRequestUuid by　viewModel.bleRequestUuid.collectAsState()
 
     // ★ 変更点1: Advertiserのインスタンスを保持するstateを定義
     var bleAdvertiser by remember { mutableStateOf<BLEAdvertiser?>(null) }
@@ -80,6 +82,70 @@ fun HelpMarkHolderHomeScreen(
         }
     }
 
+    LaunchedEffect(bleRequestUuid) {
+        // UUIDがnullでない場合のみAdvertiseを開始
+        bleRequestUuid?.let { uuid ->
+            Log.d("HOLDER_BLE", "BLE Advertise開始: UUID=$uuid")
+        
+            try {
+                // 既存のAdvertiserがあれば停止
+                bleAdvertiser?.stopAdvertise()
+            
+                // 新しいAdvertiserインスタンスを作成
+                val advertiser = BLEAdvertiser(context, uuid)
+                bleAdvertiser = advertiser
+            
+                // BLE Advertiseを開始
+                advertiser.startAdvertise(
+                    message = uuid  // UUIDをメッセージとして使用
+                ) { status ->
+                    when (status) {
+                        "ADVERTISING_STARTED" -> {
+                            Log.d("HOLDER_BLE", "Advertise開始成功")
+                            Toast.makeText(
+                                context, 
+                                "支援者を探しています...", 
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        "ADVERTISING_FAILED" -> {
+                            Log.e("HOLDER_BLE", "Advertise開始失敗")
+                            Toast.makeText(
+                                context, 
+                                "Bluetooth Advertiseの開始に失敗しました", 
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        "ADVERTISING_STOPPED" -> {
+                            Log.d("HOLDER_BLE", "Advertise停止")
+                        }
+                        else -> {
+                            Log.d("HOLDER_BLE", "Advertise状態: $status")
+                        }
+                    }
+                }
+            
+                // タイムアウト設定（例: 30秒後に自動停止）
+                kotlinx.coroutines.delay(30 * 1000L) // 30秒
+                advertiser.stopAdvertise()
+                Log.d("HOLDER_BLE", "Advertiseタイムアウトにより停止")
+                Toast.makeText(
+                    context, 
+                    "支援者が見つかりませんでした", 
+                    Toast.LENGTH_SHORT
+                ).show()
+            
+            } catch (e: Exception) {
+                Log.e("HOLDER_BLE", "BLE Advertise処理エラー: ${e.message}")
+                Toast.makeText(
+                    context, 
+                    "エラーが発生しました: ${e.message}", 
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    } 
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -90,7 +156,7 @@ fun HelpMarkHolderHomeScreen(
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { callviewModel.callCreateHelpRequest(latitude: ido, longitude: keido) },
+                onClick = { callviewModel.callCreateHelpRequest(latitude = ido, longitude = keido) },
                 modifier = Modifier.size(200.dp),
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
