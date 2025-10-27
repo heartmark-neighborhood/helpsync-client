@@ -13,6 +13,8 @@ import androidx.navigation.compose.*
 import com.example.helpsync.help_mark_holder_home_screen.HelpMarkHolderHomeScreen
 import com.example.helpsync.help_mark_holder_profile_screen.HelpMarkHolderProfileScreen
 import com.example.helpsync.viewmodel.UserViewModel
+import com.google.android.gms.location.FusedLocationProviderClient
+import org.koin.androidx.compose.koinViewModel
 
 // タブの定義
 enum class HelpMarkHolderScreenTab(
@@ -28,6 +30,7 @@ enum class HelpMarkHolderScreenTab(
 fun HelpMarkHolderScreen(
     mainNavController: NavHostController, // MainActivityのNavController
     userViewModel: UserViewModel,
+    locationClient: FusedLocationProviderClient,
     onSignOut: () -> Unit = {}
 ) {
     // タブ内ナビゲーション用のNavController
@@ -64,10 +67,12 @@ fun HelpMarkHolderScreen(
         ) {
             composable(HelpMarkHolderScreenTab.Home.route) {
                 HelpMarkHolderHomeScreen(
-                    viewModel = userViewModel,
+                    userViewModel = userViewModel,
                     onMatchingStarted = {
                         mainNavController.navigate("HelpMarkHolderMatching") // ルート名を文字列で指定
-                    }
+                    },
+                    helpMarkHolderViewModel = koinViewModel(),
+                    locationClient = locationClient
                 )
             }
             composable(HelpMarkHolderScreenTab.Profile.route) {
