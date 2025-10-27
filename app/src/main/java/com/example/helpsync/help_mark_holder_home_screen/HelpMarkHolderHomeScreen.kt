@@ -39,9 +39,9 @@ fun HelpMarkHolderHomeScreen(
 ) {
     val context = LocalContext.current
 
-    val helpRequest by viewModel.activeHelpRequest.collectAsState()
-    val isLoading by remember { derivedStateOf { viewModel.isLoading } }
-    val bleRequestUuid by　viewModel.bleRequestUuid.collectAsState()
+    val helpRequest by userViewModel.activeHelpRequest.collectAsState()
+    val isLoading by remember { derivedStateOf { userViewModel.isLoading } }
+    val bleRequestUuid by helpMarkHolderViewModel.bleRequestUuid.collectAsState()
 
     // ★ 変更点1: Advertiserのインスタンスを保持するstateを定義
     var bleAdvertiser by remember { mutableStateOf<BLEAdvertiser?>(null) }
@@ -184,7 +184,7 @@ fun HelpMarkHolderHomeScreen(
                                 }
                         }
 
-                        //`ActivityCompat.shouldShowRequestPermissionRationale()`であれそれするのも良さげ
+                        // TODO: Consider using `ActivityCompat.shouldShowRequestPermissionRationale()` to explain to the user why location permission is needed.
 
                         else -> {
                             // 権限がない場合、パーミッションリクエストを起動
