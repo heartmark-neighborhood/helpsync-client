@@ -1,17 +1,41 @@
 package com.example.helpsync
 
 import android.app.Application
+import android.util.Log
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
-import com.example.myapp.di.appModule
+import com.example.helpsync.DI.appModule
+import com.google.firebase.FirebaseApp
+import com.google.firebase.appcheck.FirebaseAppCheck
+import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
+import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 
 class CustomApplication : Application() {
-    override fun onCreate() {
-        super.onCreate()
+        override fun onCreate() {
+            super.onCreate()
+    
+            android.util.Log.d("AppCheckDebug", "CustomApplication.onCreate() called")
+            FirebaseApp.initializeApp(this)
+            val firebaseAppCheck = FirebaseAppCheck.getInstance()
 
-        startKoin {
-            androidContext(this@CustomApplication)
-            modules(appModule)
+            Log.d("a", "${BuildConfig.DEBUG}")
+            if (BuildConfig.DEBUG) {
+                Log.d("AppCheckDebug", "DEBUG build detected. Installing DebugAppCheckProviderFactory.")
+                // デバッグビルドの場合
+                firebaseAppCheck.installAppCheckProviderFactory(
+                    DebugAppCheckProviderFactory.getInstance()
+                )
+            } else {
+                Log.d("AppCheckDebug", "RELEASE build detected. Installing PlayIntegrityAppCheckProviderFactory.")
+                // リリースビルドの場合
+                firebaseAppCheck.installAppCheckProviderFactory(
+                    PlayIntegrityAppCheckProviderFactory.getInstance()
+                )
+            }
+    
+            startKoin {
+                androidContext(this@CustomApplication)
+                modules(appModule)
+            }
         }
-    }
 }

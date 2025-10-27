@@ -1,14 +1,9 @@
 package com.example.helpsync.help_mark_holder_matching_screen
 
-import android.content.Intent
-import android.widget.Toast
-import com.example.helpsync.blescanner.BLEScanner
-
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material3.*
@@ -18,21 +13,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
+import com.example.helpsync.data.RequestStatus
+import com.example.helpsync.viewmodel.UserViewModel
 
 @Composable
 fun HelpMarkHolderMatchingScreen(
-    onMatchingComplete: () -> Unit = {},
-    onCancel: () -> Unit = {}
+    requestId: String,
+    viewModel: UserViewModel,
+    onMatchingComplete: (String) -> Unit, // requestIdを渡せるように変更
+    onCancel: () -> Unit
 ) {
-    val context = LocalContext.current
-    var timeRemaining by remember { mutableIntStateOf(30) }
-    var isMatching by remember { mutableStateOf(true) }
+    // ★ 変更点2: ViewModelからアクティブなリクエストの状態を監視する
+    val activeRequest by viewModel.activeHelpRequest.collectAsState()
 
     val infiniteTransition = rememberInfiniteTransition(label = "matching_animation")
     val rotationAngle by infiniteTransition.animateFloat(
@@ -45,33 +40,15 @@ fun HelpMarkHolderMatchingScreen(
         label = "rotation"
     )
 
-    LaunchedEffect(isMatching) {
-        if (isMatching) {
-            while (timeRemaining > 0 && isMatching) {
-                delay(1000)
-                timeRemaining--
-            }
-            if (timeRemaining <= 0) {
-                Toast.makeText(context, "マッチングに失敗しました", Toast.LENGTH_SHORT).show()
-                onCancel()
-            }
+    // ★ 変更点3: サーバーからの状態変更を監視するロジック
+    LaunchedEffect(activeRequest) {
+        // リクエストの状態がMATCHEDに変わったら、完了コールバックを呼ぶ
+        if (activeRequest?.status == RequestStatus.MATCHED) {
+            onMatchingComplete(requestId)
         }
     }
 
-    LaunchedEffect(Unit) {
-        delay((10000..25000).random().toLong())
-        if (isMatching) {
-            onMatchingComplete()
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            val stopIntent = Intent(context, BLEScanner::class.java)
-            context.stopService(stopIntent)
-        }
-    }
-
+    // ★ 変更点4: ダミーのタイマーとランダム遅延を削除
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -118,60 +95,15 @@ fun HelpMarkHolderMatchingScreen(
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Card(
-            modifier = Modifier.padding(horizontal = 32.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "承認残り時間",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF757575)
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "${timeRemaining}秒",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = if (timeRemaining <= 10) Color(0xFFFF5722) else Color(0xFF2196F3),
-                    fontSize = 36.sp
-                )
-            }
-        }
-
         Spacer(modifier = Modifier.weight(1f))
 
         OutlinedButton(
-            onClick = {
-                isMatching = false
-                onCancel()
-            },
+            onClick = onCancel, // キャンセル処理はシンプルに
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(28.dp),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color(0xFF757575)
-            )
+                .height(56.dp)
         ) {
-            Text(
-                text = "キャンセル",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
+            Text("キャンセル", fontWeight = FontWeight.Medium)
         }
 
         Spacer(modifier = Modifier.height(32.dp))

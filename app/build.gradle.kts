@@ -38,6 +38,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -59,28 +60,33 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("androidx.datastore:datastore-preferences:1.1.7")
     
+    // Fragment for ActivityResult APIs
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
+    
     // Firebase - Import the Firebase BoM
     implementation(platform(libs.firebase.bom))
 
     //koin
     implementation("io.insert-koin:koin-core:4.1.0")
     implementation("io.insert-koin:koin-android:4.1.0")
-    implementation("io.insert-koin:koin-androidx-viewmodel:4.1.0")
+    implementation("io.insert-koin:koin-androidx-compose:4.1.0")
     
     // Add the dependencies for Firebase products you want to use
     // When using the BoM, don't specify versions in Firebase dependencies
     implementation(libs.firebase.analytics)
-    implementation(libs.firebase.auth)
-    implementation(libs.firebase.firestore)
-    implementation(libs.firebase.storage)
-    implementation(libs.firebase.functions)
-    implementation(libs.firebase.messaging)
 
-    implementation(libs.firebase.functions.ktx)
+    implementation("com.google.firebase:firebase-auth-ktx:22.3.1")
+    implementation("com.google.firebase:firebase-firestore-ktx:24.11.1")
+    implementation("com.google.firebase:firebase-storage-ktx:20.3.0")
+    implementation("com.google.firebase:firebase-functions-ktx:20.4.0")
+    implementation("com.google.firebase:firebase-messaging-ktx:23.4.1")
+    implementation("com.google.firebase:firebase-appcheck-playintegrity:17.0.1")
+    debugImplementation("com.google.firebase:firebase-appcheck-debug:17.0.1")
 
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.7.0")
-    
+    implementation(libs.play.services.location)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

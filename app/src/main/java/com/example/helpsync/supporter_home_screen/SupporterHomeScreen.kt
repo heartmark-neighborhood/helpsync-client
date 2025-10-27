@@ -1,107 +1,190 @@
 package com.example.helpsync.supporter_home_screen
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.helpsync.blescanner.BLEScanner
 import androidx.core.content.ContextCompat
-import java.util.UUID
-
-data class SupportRequest(val id: String, val nickname: String, val content: String)
+import com.example.helpsync.blescanner.BLEScanner
+import com.example.helpsync.data.HelpRequest
+import com.example.helpsync.viewmodel.UserViewModel
 
 @SuppressLint("NewApi")
 @Composable
 fun SupporterHomeScreen(
-    // ✅ エラーの原因: この引数の名前と型を MainActivity と一致させます
-    onSupportRequestClick: (nickname: String, content: String) -> Unit
+    viewModel: UserViewModel,
+    onNavigateToAcceptance: (requestId: String) -> Unit
 ) {
     val context = LocalContext.current
-    var requests by remember { mutableStateOf(emptyList<SupportRequest>()) }
+    val pendingRequests by viewModel.pendingHelpRequests.collectAsState()
+    val isLoading by remember { derivedStateOf { viewModel.isLoading } }
+    var selectedRequest by remember { mutableStateOf<HelpRequest?>(null) }
 
-    // (BroadcastReceiverとDisposableEffectのコードは変更なし)
-    val bleScanReceiver = remember {
-        object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                if (intent.action == "com.example.SCAN_RESULT") {
-                    val bundle: Bundle? = intent.extras
-                    val found = bundle?.getBoolean("result") ?: false
-                    if (found) {
-                        val deviceAddress = bundle?.getString("DEVICE_ADDRESS") ?: "Unknown"
-                        val deviceName = bundle?.getString("DEVICE_NAME") ?: "Unknown Device"
+    // --- 権限要求の処理 (初回のみ) ---
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        val allGranted = perms.entries.all { it.value }
+        if (!allGranted) {
+            Toast.makeText(context, "スキャンには権限が必要です", Toast.LENGTH_SHORT).show()
+        }
+    }
 
-                        val newRequest = SupportRequest(
-                            id = deviceAddress,
-                            nickname = deviceName,
-                            content = "ヘルプが必要です"
-                        )
+    LaunchedEffect(Unit) {
+        permissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.POST_NOTIFICATIONS
+            )
+        )
+        // 画面表示時にPENDINGのリクエスト一覧を取得
+        viewModel.fetchPendingHelpRequests()
+    }
 
-                        if (!requests.any { it.id == newRequest.id }) {
-                            requests = requests + newRequest
+    LaunchedEffect(selectedRequest) {
+        val requestToScan = selectedRequest
+        if (requestToScan != null) {
+            // BroadcastReceiverを定義
+            val bleScanReceiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context, intent: Intent) {
+                    if (intent.action == "com.example.SCAN_RESULT") {
+                        val bundle: Bundle? = intent.extras
+                        val found = bundle?.getBoolean("SCAN_SUCCESS") ?: false
+                        if (found) {
+                            // ▼▼▼【修正点】null許容のbundleに対して、安全にアクセスするように変更 ▼▼▼
+                            val foundRequestId = bundle?.getString("REQUEST_ID")
+                            if (foundRequestId == requestToScan.id) {
+                                Toast.makeText(context, "${requestToScan.requesterNickname}さんを発見！", Toast.LENGTH_SHORT).show()
+                                viewModel.handleProximityVerificationResult(requestToScan.id)
+                                onNavigateToAcceptance(requestToScan.id)
+                            }
                         }
                     }
                 }
             }
+            // スキャンサービスを開始
+            val scanIntent = Intent(context, BLEScanner::class.java).apply {
+                putExtra("UUID", requestToScan.proximityUuid)
+            }
+            ContextCompat.startForegroundService(context, scanIntent)
+            // レシーバーを登録
+            val filter = IntentFilter("com.example.SCAN_RESULT")
+            ContextCompat.registerReceiver(context, bleScanReceiver, filter, ContextCompat.RECEIVER_EXPORTED)
+            Log.d("SUPPORTER_HOME", "Scan started for ${requestToScan.requesterNickname}")
         }
     }
 
+    // 画面から離れるときにスキャンサービスとレシーバーを停止
     DisposableEffect(Unit) {
-        val uuidToScan = UUID.fromString("0000180A-0000-1000-8000-00805F9B34FB")
-        val intent = Intent(context, BLEScanner::class.java)
-        intent.putExtra("UUID", uuidToScan.toString())
-        ContextCompat.startForegroundService(context, intent)
-
-        val filter = IntentFilter("com.example.SCAN_RESULT")
-        context.registerReceiver(bleScanReceiver, filter, Context.RECEIVER_EXPORTED)
-
         onDispose {
-            context.unregisterReceiver(bleScanReceiver)
-            context.stopService(intent)
+            val stopIntent = Intent(context, BLEScanner::class.java)
+            context.stopService(stopIntent)
+            Log.d("SUPPORTER_HOME", "Screen disposed. Scan service stopped.")
         }
     }
 
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+    // --- UI部分 ---
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("支援依頼リスト", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
+        when {
+            isLoading && pendingRequests.isEmpty() -> {
+                CircularProgressIndicator()
+            }
 
-        if (requests.isEmpty()) {
-            Text("現在、支援依頼はありません。", style = MaterialTheme.typography.bodyLarge)
-        } else {
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(requests) { request ->
-                    Card(
-                        // ✅ ここで onSupportRequestClick を呼び出します
-                        onClick = { onSupportRequestClick(request.nickname, request.content) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("依頼者: ${request.nickname}", style = MaterialTheme.typography.titleMedium)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("内容: ${request.content}", style = MaterialTheme.typography.bodyMedium)
+            selectedRequest != null -> {
+                // スキャン中の表示
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "${selectedRequest!!.requesterNickname}さんを\n探しています...",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
+
+            pendingRequests.isEmpty() -> {
+                Text("現在、助けを求めている人はいません。")
+            }
+
+            else -> {
+                // リクエスト一覧の表示
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        Text(
+                            "近くで助けを求めている人",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    items(pendingRequests) { request ->
+                        HelpRequestCard(request = request) {
+                            selectedRequest = request // 項目をタップでスキャン開始
                         }
                     }
                 }
             }
         }
+    }
+}
 
-        Spacer(modifier = Modifier.height(16.dp))
+@Composable
+fun HelpRequestCard(
+    request: HelpRequest,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = request.requesterNickname,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                // 必要ならここにリクエスト時刻などを表示
+            }
+            Button(onClick = onClick) {
+                Text("支援する")
+            }
+        }
     }
 }
