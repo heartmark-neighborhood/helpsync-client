@@ -91,10 +91,36 @@ class HelpMarkHolderViewModel(
             }
         }
     }
+
+    fun callUpdateDeviceLocation(latitude: Double, longitude: Double) {
+        viewModelScope.launch {
+            val deviceId = try {
+                cloudMessageRepository.getDeviceId()
+            } catch(e: Exception) {
+                Log.d("Error", "deviceIdの取得に失敗しました")
+            }
+            try {
+                val functions = Firebase.functions("asia-northeast2")
+                val locationMap = hashMapOf(
+                    "latitude" to latitude,
+                    "longitude" to longitude
+                )
+                val data = hashMapOf(
+                    "location" to locationMap,
+                    "deviceId" to deviceId
+                )
+
+                val callResult = functions.getHttpsCallable("updateDeviceLocation").call(data).await()
+            } catch(e: Exception) {
+                Log.d("Error", "updateDeviceLocationの呼び出しに失敗しました")
+                Log.d("Error", "エラーメッセージ: ${e.message}")
+            }
+        }
+    }
     fun callNotifyProximityVerificationResult(scanResult: Boolean) {
         viewModelScope.launch {
             try {
-                val functions = Firebase.functions("asis-northeast2")
+                val functions = Firebase.functions("asia-northeast2")
                 val result = if(scanResult) "verified"
                 else "failed"
                 val data = hashMapOf(
