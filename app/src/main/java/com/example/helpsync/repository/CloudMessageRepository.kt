@@ -16,6 +16,7 @@ interface CloudMessageRepository {
 
     fun postCloudMessage(data: Map<String, String>)
     suspend fun getDeviceId() : String?
+    suspend fun saveDeviceId(deviceID: String)
     suspend fun callRenewDeviceToken(token: String)
 }
 
@@ -63,10 +64,13 @@ class CloudMessageRepositoryImpl (
         )
 
         val callResult = functions.getHttpsCallable("RenewDeviceToken").call(data).await()
-
     }
 
     override suspend fun getDeviceId(): String? {
         return deviceIdDataSource.getDeviceID()
+    }
+
+    override suspend fun saveDeviceId(deviceId: String) {
+        deviceIdDataSource.saveDeviceId(deviceId)
     }
 }
