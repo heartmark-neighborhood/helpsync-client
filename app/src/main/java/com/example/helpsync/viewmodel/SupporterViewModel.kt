@@ -96,4 +96,12 @@ class SupporterViewModel(
             }
         }
     }
+
+    fun clearViewedRequest() { // 既存のものを流用 or 新設
+        _helpRequestJson.value = null
+        _requesterProfile.value = null
+        _bleRequestUuid.value = null
+         helpRequestId.value = null
+        Log.d("SupporterViewModel", "Cleared viewed request data.")
+    }
 }

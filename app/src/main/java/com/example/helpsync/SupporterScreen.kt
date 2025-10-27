@@ -1,6 +1,7 @@
 package com.example.helpsync
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
@@ -14,10 +15,11 @@ import androidx.navigation.compose.*
 import com.example.helpsync.request_acceptance_screen.RequestAcceptanceScreen
 import com.example.helpsync.supporter_home_screen.SupporterHomeScreen
 import com.example.helpsync.supporter_setting_screen.SupporterSettingScreen
-import com.example.helpsync.support_details_confirmation_screen.SupportDetailsConfirmationScreen
 import com.example.helpsync.viewmodel.UserViewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.helpsync.viewmodel.SupporterViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 enum class MainScreenTab(
     val icon: ImageVector,
@@ -25,7 +27,7 @@ enum class MainScreenTab(
     val route: String
 ) {
     Home(Icons.Outlined.Home, "ホーム", "main/home"),
-    Settings(Icons.Outlined.Settings, "設定", "main/settings")
+    profile(Icons.Outlined.Settings, "プロフィール", "main/profile")
 }
 
 @Composable
@@ -42,6 +44,7 @@ fun SupporterScreen(
     val tabNavController = rememberNavController()
     val currentDestination by tabNavController.currentBackStackEntryAsState()
     val currentRoute = currentDestination?.destination?.route
+    val supporterViewModel: SupporterViewModel = viewModel()
 
     Scaffold(
         bottomBar = {
@@ -71,14 +74,18 @@ fun SupporterScreen(
         ) {
             composable(MainScreenTab.Home.route) {
                 SupporterHomeScreen(
-                    viewModel = userViewModel,
+                    viewModel = supporterViewModel,
                     onNavigateToAcceptance = { requestId ->
-                        tabNavController.navigate("main/request_acceptance/$requestId")
+                        if (requestId.isNotEmpty()) {
+                            tabNavController.navigate("main/matched_detail/$requestId")
+                        } else {
+                            Log.e("SupporterScreen", "Cannot navigate, requestId is empty!")
+                        }
                     }
                 )
             }
 
-            composable(MainScreenTab.Settings.route) {
+            composable(MainScreenTab.profile.route) {
                 SupporterSettingScreen(
                     nickname = nickname,
                     onNicknameChange = {},
@@ -92,7 +99,7 @@ fun SupporterScreen(
             }
 
             composable(
-                route = "main/request_acceptance/{requestId}",
+                route = "main/matched_detail/{requestId}",
                 arguments = listOf(navArgument("requestId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
@@ -107,38 +114,22 @@ fun SupporterScreen(
 
                 if (request != null) {
                     RequestAcceptanceScreen(
-                        nickname = request!!.requesterNickname,
-                        content = "支援を求めています",
-                        onAcceptClick = {
-                            tabNavController.navigate("main/request_detail/$requestId")
-                        },
-                        onCancelClick = {
-                            userViewModel.clearViewedRequest()
-                            tabNavController.popBackStack()
+                        viewModel = supporterViewModel, // 正しい ViewModel を渡す
+                        onDoneClick = { // ★ 完了ボタンが押されたときの処理
+                            // ViewModelのデータをクリア (任意だが推奨)
+                            supporterViewModel.clearViewedRequest() // ViewModelにこの関数が必要
+                            // ホームタブに戻る
+                            tabNavController.navigate(MainScreenTab.Home.route) {
+                                // 現在の画面 (matched_detail) をスタックから削除
+                                popUpTo(tabNavController.graph.startDestinationId) { inclusive = false } // ホームまで戻る
+                                launchSingleTop = true
+                            }
                         }
                     )
                 } else {
                     CircularProgressIndicator()
                 }
             }
-
-            // --- ▼▼▼ 修正箇所 ▼▼▼ ---
-            composable(
-                route = "main/request_detail/{requestId}",
-                arguments = listOf(navArgument("requestId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
-
-                SupportDetailsConfirmationScreen(
-                    requestId = requestId,
-                    viewModel = userViewModel,
-                    onDoneClick = {
-                        userViewModel.clearViewedRequest()
-                        tabNavController.popBackStack(MainScreenTab.Home.route, inclusive = false)
-                    }
-                )
-            }
-            // --- ▲▲▲ 修正箇所ここまで ▲▲▲ ---
         }
     }
 }
