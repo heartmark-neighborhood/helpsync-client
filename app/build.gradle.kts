@@ -58,6 +58,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
     
     // Fragment for ActivityResult APIs
     implementation("androidx.fragment:fragment-ktx:1.8.5")

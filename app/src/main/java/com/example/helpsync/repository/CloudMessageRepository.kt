@@ -1,18 +1,28 @@
 package com.example.helpsync.repository
 
 import android.util.Log
+import com.example.helpsync.data.DeviceIdDataSource
+import com.example.helpsync.viewmodel.Evaluation
+import com.google.firebase.functions.ktx.functions
+import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.tasks.await
 
 interface CloudMessageRepository {
     val bleRequestMessageFlow: SharedFlow<Map<String, String>>
     val helpRequestMessageFlow: SharedFlow<Map<String, String>>
 
     fun postCloudMessage(data: Map<String, String>)
+    suspend fun getDeviceId() : String?
+    suspend fun saveDeviceId(deviceID: String)
+    suspend fun callRenewDeviceToken(token: String)
 }
 
-class CloudMessageRepositoryImpl : CloudMessageRepository {
+class CloudMessageRepositoryImpl (
+    private val deviceIdDataSource: DeviceIdDataSource
+): CloudMessageRepository {
 
     private val _bleRequestMessageFlow = MutableSharedFlow<Map<String, String>>(
         extraBufferCapacity = 1,
@@ -43,5 +53,24 @@ class CloudMessageRepositoryImpl : CloudMessageRepository {
             }
 
         }
+    }
+
+    override suspend fun callRenewDeviceToken(token: String) {
+        val functions = Firebase.functions("asis-northeast2")
+        val deviceId = deviceIdDataSource.getDeviceID()
+        val data = hashMapOf(
+            "deviceId" to deviceId,
+            "deviceToken" to token
+        )
+
+        val callResult = functions.getHttpsCallable("RenewDeviceToken").call(data).await()
+    }
+
+    override suspend fun getDeviceId(): String? {
+        return deviceIdDataSource.getDeviceID()
+    }
+
+    override suspend fun saveDeviceId(deviceId: String) {
+        deviceIdDataSource.saveDeviceId(deviceId)
     }
 }
