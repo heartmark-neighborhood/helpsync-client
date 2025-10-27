@@ -2,6 +2,8 @@ package com.example.helpsync.help_mark_holder_home_screen
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import android.location.Location
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -19,19 +21,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.example.helpsync.bleadvertiser.BLEAdvertiser
 import com.example.helpsync.data.RequestStatus
+import com.example.helpsync.viewmodel.HelpMarkHolderViewModel
 import com.example.helpsync.viewmodel.UserViewModel
+import com.google.android.gms.location.CurrentLocationRequest
+import com.google.android.gms.location.FusedLocationProviderClient
 
 @SuppressLint("NewApi")
 @Composable
 fun HelpMarkHolderHomeScreen(
-    viewModel: UserViewModel,
-    onMatchingStarted: () -> Unit
+    userViewModel: UserViewModel,
+    onMatchingStarted: () -> Unit,
+    helpMarkHolderViewModel : HelpMarkHolderViewModel,
+    locationClient: FusedLocationProviderClient
 ) {
     val context = LocalContext.current
-    val helpRequest by viewModel.activeHelpRequest.collectAsState()
-    val isLoading by remember { derivedStateOf { viewModel.isLoading } }
+
+    val helpRequest by userViewModel.activeHelpRequest.collectAsState()
+    val isLoading by remember { derivedStateOf { userViewModel.isLoading } }
+    val bleRequestUuid by helpMarkHolderViewModel.bleRequestUuid.collectAsState()
 
     // ★ 変更点1: Advertiserのインスタンスを保持するstateを定義
     var bleAdvertiser by remember { mutableStateOf<BLEAdvertiser?>(null) }
@@ -79,6 +89,70 @@ fun HelpMarkHolderHomeScreen(
         }
     }
 
+    LaunchedEffect(bleRequestUuid) {
+        // UUIDがnullでない場合のみAdvertiseを開始
+        bleRequestUuid?.let { uuid ->
+            Log.d("HOLDER_BLE", "BLE Advertise開始: UUID=$uuid")
+        
+            try {
+                // 既存のAdvertiserがあれば停止
+                bleAdvertiser?.stopAdvertise()
+            
+                // 新しいAdvertiserインスタンスを作成
+                val advertiser = BLEAdvertiser(context, uuid)
+                bleAdvertiser = advertiser
+            
+                // BLE Advertiseを開始
+                advertiser.startAdvertise(
+                    message = uuid  // UUIDをメッセージとして使用
+                ) { status ->
+                    when (status) {
+                        "ADVERTISING_STARTED" -> {
+                            Log.d("HOLDER_BLE", "Advertise開始成功")
+                            Toast.makeText(
+                                context, 
+                                "支援者を探しています...", 
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        "ADVERTISING_FAILED" -> {
+                            Log.e("HOLDER_BLE", "Advertise開始失敗")
+                            Toast.makeText(
+                                context, 
+                                "Bluetooth Advertiseの開始に失敗しました", 
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        "ADVERTISING_STOPPED" -> {
+                            Log.d("HOLDER_BLE", "Advertise停止")
+                        }
+                        else -> {
+                            Log.d("HOLDER_BLE", "Advertise状態: $status")
+                        }
+                    }
+                }
+            
+                // タイムアウト設定（例: 30秒後に自動停止）
+                kotlinx.coroutines.delay(30 * 1000L) // 30秒
+                advertiser.stopAdvertise()
+                Log.d("HOLDER_BLE", "Advertiseタイムアウトにより停止")
+                Toast.makeText(
+                    context, 
+                    "支援者が見つかりませんでした", 
+                    Toast.LENGTH_SHORT
+                ).show()
+            
+            } catch (e: Exception) {
+                Log.e("HOLDER_BLE", "BLE Advertise処理エラー: ${e.message}")
+                Toast.makeText(
+                    context, 
+                    "エラーが発生しました: ${e.message}", 
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    } 
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -89,7 +163,36 @@ fun HelpMarkHolderHomeScreen(
             CircularProgressIndicator()
         } else {
             Button(
-                onClick = { viewModel.createHelpRequest() },
+                onClick = {
+                    when {
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED -> {
+                            Log.d("HelpMarkHolderHomeScreen", "Permission already granted, fetching location...")
+                            val request = CurrentLocationRequest.Builder()
+                                .setPriority(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY)
+                                .setDurationMillis(5000)
+                                .build()
+                            locationClient.getCurrentLocation(request, null)
+                                .addOnSuccessListener { location: Location? ->
+                                    val lat = location?.latitude ?: 0.0
+                                    val lon = location?.longitude ?: 0.0
+
+                                    Log.d("LocationClient", "Location acquired: $lat, $lon")
+                                    helpMarkHolderViewModel.callCreateHelpRequest(lat, lon)
+                                }
+                        }
+
+                        // TODO: Consider using `ActivityCompat.shouldShowRequestPermissionRationale()` to explain to the user why location permission is needed.
+
+                        else -> {
+                            // 権限がない場合、パーミッションリクエストを起動
+                            Log.d("LocationButton", "Permission not granted, launching request...")
+                            permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
+                        }
+                    }
+                },
                 modifier = Modifier.size(200.dp),
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
