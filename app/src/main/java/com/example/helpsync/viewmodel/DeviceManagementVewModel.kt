@@ -17,11 +17,7 @@ class DeviceManagementVewModel(
 
     fun callRegisterNewDevice(latitude: Double, longitude: Double) {
         viewModelScope.launch{
-            val deviceId = try {
-                cloudMessageRepository.getDeviceId()
-            } catch(e: Exception) {
-                Log.d("Error", "deviceIdの取得に失敗しました")
-            }
+            var deviceId : String? = ""
             try {
                 val functions = Firebase.functions("asia-northeast2")
                 val owner = FirebaseAuth.getInstance().currentUser
@@ -34,14 +30,48 @@ class DeviceManagementVewModel(
                 val data = hashMapOf(
                     "ownerId" to ownerId,
                     "deviceToken" to deviceToken,
-
                     "location" to locationMap
                 )
+
+                val callResult = functions.getHttpsCallable("registerNewDevice").call(data).await()
+
+                val responseData = callResult.data as? Map<String, Any>
+                deviceId = responseData?.get("deviceId") as? String
             } catch(e: Exception){
                 Log.d("Error", "デバイスの登録に失敗しました")
                 Log.d("Error", "Error message: ${e.message}")
             }
+            try {
+                if(deviceId != null) cloudMessageRepository.saveDeviceId(deviceId)
+                else
+                {
+                    Log.d("Error", "deviceIDがnullです")
+                }
+            } catch(e: Exception) {
+                Log.d("Error", "デバイスの登録に失敗しました")
+                Log.d("Error", "Error message: ${e.message}")
+            }
         }
+    }
 
+    fun calldeleteDevice() {
+        viewModelScope.launch {
+            val deviceId = try {
+                cloudMessageRepository.getDeviceId()
+            } catch(e: Exception) {
+                Log.d("Error", "deviceIdの取得に失敗しました")
+            }
+            try{
+                val functions = Firebase.functions("asia-northeast2")
+                val data = hashMapOf(
+                    "deviceId" to deviceId
+                )
+
+                val callResult = functions.getHttpsCallable("deleteDevice").call(data).await()
+            } catch(e: Exception) {
+                Log.d("Error", "デバイスの削除に失敗しました")
+                Log.d("Error", "Error message: ${e.message}")
+            }
+        }
     }
 }
