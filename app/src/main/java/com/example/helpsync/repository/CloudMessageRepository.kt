@@ -15,7 +15,7 @@ interface CloudMessageRepository {
     val helpRequestMessageFlow: SharedFlow<Map<String, String>>
 
     fun postCloudMessage(data: Map<String, String>)
-    suspend fun getDeviceid() : String?
+    suspend fun getDeviceId() : String?
     suspend fun callRenewDeviceToken(token: String)
 }
 
@@ -66,7 +66,7 @@ class CloudMessageRepositoryImpl (
 
     }
 
-    override suspend fun getDeviceid(): String? {
+    override suspend fun getDeviceId(): String? {
         return deviceIdDataSource.getDeviceID()
     }
 }

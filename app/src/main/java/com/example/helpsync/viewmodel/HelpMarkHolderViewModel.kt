@@ -61,11 +61,20 @@ class HelpMarkHolderViewModel(
 
     fun callCreateHelpRequest(latitude: Double, longitude: Double) {
         viewModelScope.launch {
+            val deviceId = try {
+                cloudMessageRepository.getDeviceId()
+            } catch(e: Exception) {
+                Log.d("Error", "deviceIdの取得に失敗しました")
+            }
             try {
                 val functions = Firebase.functions("asia-northeast2")
-                val location = Location(latitude, longitude)
+                val locationMap = hashMapOf(
+                    "latitude" to latitude,
+                    "longitude" to longitude
+                )
                 val data = hashMapOf(
-                    "location" to location
+                    "deviceId" to deviceId,
+                    "location" to locationMap
                 )
 
                 val callResult = functions.getHttpsCallable("createHelpRequest").call(data).await()
@@ -76,6 +85,8 @@ class HelpMarkHolderViewModel(
                 if(status != null) helpRequestId.value = "$helpRequestIdResult"
 
             } catch(e: Exception){
+                Log.d("Error", "createHelpRequestの呼びだしに失敗しました")
+                Log.d("Error", "エラーメッセージ ${e.message}")
                 helpRequestId.value =  "Error ${e.message}"
             }
         }
