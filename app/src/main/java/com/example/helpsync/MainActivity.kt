@@ -17,8 +17,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -38,15 +36,18 @@ import com.example.helpsync.profile.ProfileScreen
 import com.example.helpsync.role_selection_screen.RoleSelectionScreen
 import com.example.helpsync.role_selection_screen.RoleType
 import com.example.helpsync.settings_screen.SettingsScreen
-import com.example.helpsync.supporter_home_screen.SupporterHomeScreen
 import com.example.helpsync.support_details_confirmation_screen.SupportDetailsConfirmationScreen
 import com.example.helpsync.ui.theme.HelpSyncTheme
+import com.example.helpsync.viewmodel.HelpMarkHolderViewModel
 import com.example.helpsync.viewmodel.UserViewModel
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
+import org.koin.androidx.compose.koinViewModel
 import java.net.URLEncoder
 import java.net.URLDecoder
 
@@ -70,6 +71,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private lateinit var bleReceiver: BLEScanReceiver
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -91,6 +93,8 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         try {
             FirebaseApp.initializeApp(this)
@@ -125,7 +129,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             HelpSyncTheme {
                 val navController = rememberNavController()
-                val userViewModel: UserViewModel = viewModel()
+                val userViewModel: UserViewModel = koinViewModel()
+                val helpMarkHolderViewModel: HelpMarkHolderViewModel = koinViewModel()
                 val bleAdvertiser: BLEAdvertiser = remember {
                     BLEAdvertiser(this, "0000180A-0000-1000-8000-00805F9B34FB")
                 }
@@ -292,6 +297,7 @@ class MainActivity : ComponentActivity() {
                             HelpMarkHolderScreen(
                                 mainNavController = navController,
                                 userViewModel = userViewModel,
+                                locationClient = fusedLocationClient,
                                 onSignOut = {
                                     hasNavigatedOnStartup = false
                                 }
@@ -326,7 +332,8 @@ class MainActivity : ComponentActivity() {
                             val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
                             HelpMarkHolderMatchingCompleteScreen(
                                 requestId = requestId,
-                                viewModel = userViewModel,
+                                userViewModel = userViewModel,
+                                helpMarkHolderViewModel = helpMarkHolderViewModel,
                                 onHomeClick = {
                                     navController.navigate(AppScreen.HelpMarkHolderScreen.name) {
                                         popUpTo(AppScreen.HelpMarkHolderMatchingComplete.name) { inclusive = true }
@@ -453,10 +460,12 @@ class MainActivity : ComponentActivity() {
 
                         composable(AppScreen.HelpMarkHolderHome.name) {
                             HelpMarkHolderHomeScreen(
-                                viewModel = userViewModel,
+                                userViewModel = userViewModel,
                                 onMatchingStarted = {
                                     navController.navigate(AppScreen.HelpMarkHolderMatching.name)
-                                }
+                                },
+                                helpMarkHolderViewModel = helpMarkHolderViewModel,
+                                locationClient = fusedLocationClient
                             )
                         }
 
@@ -529,7 +538,8 @@ class MainActivity : ComponentActivity() {
 
                             HelpMarkHolderMatchingCompleteScreen(
                                 requestId = navInfo?.requestId ?: "",
-                                viewModel = userViewModel,
+                                userViewModel = userViewModel,
+                                helpMarkHolderViewModel = helpMarkHolderViewModel,
                                 onHomeClick = {
                                     navController.navigate(AppScreen.HelpMarkHolderHome.name) {
                                         popUpTo(AppScreen.HelpMarkHolderMatchingComplete.name) { inclusive = true }
