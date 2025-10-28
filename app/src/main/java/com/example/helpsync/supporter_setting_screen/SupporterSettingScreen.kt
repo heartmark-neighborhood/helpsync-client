@@ -1,5 +1,6 @@
 package com.example.helpsync.supporter_setting_screen
 
+import android.annotation.SuppressLint
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,11 +29,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
-import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import coil.compose.AsyncImage
@@ -48,7 +50,7 @@ fun SupporterSettingScreen(
     onNicknameChange: (String) -> Unit = {},
     photoUri: Uri? = null,
     onPhotoChange: (Uri?) -> Unit = {},
-    modifier: Modifier = Modifier,
+    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
     onEditClick: (String) -> Unit = {},
     onPhotoSave: (Uri) -> Unit = {},
     userViewModel: UserViewModel, // デフォルト値を削除して必須パラメータに
@@ -102,14 +104,14 @@ fun SupporterSettingScreen(
             }
             
             // 新しく選択された画像がない場合は、既存のiconUrlを使用
-            if (localPhotoUri == null && !user.iconUrl.isNullOrEmpty()) {
+            if (localPhotoUri == null && user.iconUrl.isNotEmpty()) {
                 Log.d("SupporterSettingScreen", "🔄 Using existing iconUrl for display")
             }
             
             // 既存画像のハッシュ値を計算（UserViewModelに保存されているか確認）
             // 注意: Firebase URLから直接ハッシュを計算するのは困難なので、
             // 別途ハッシュ値をデータベースに保存する仕組みが必要
-            if (!user.iconUrl.isNullOrEmpty() && currentPhotoHash == null) {
+            if (user.iconUrl.isNotEmpty() && currentPhotoHash == null) {
                 // 現在は既存画像のハッシュ値を取得する方法がないため、
                 // 新しい画像が選択された場合のみハッシュ比較を行う
                 Log.d("SupporterSettingScreen", "既存画像のハッシュ値取得はスキップ（Firebase URLから直接計算不可）")
@@ -191,8 +193,8 @@ fun SupporterSettingScreen(
                 // ファイル種別を内容から推測
                 val fileTypeFromContent = when {
                     buffer.size >= 2 && buffer[0] == 0xFF.toByte() && buffer[1] == 0xD8.toByte() -> "JPEG"
-                    buffer.size >= 8 && buffer[1] == 'P'.toByte() && buffer[2] == 'N'.toByte() && buffer[3] == 'G'.toByte() -> "PNG"
-                    buffer.size >= 12 && buffer[8] == 'W'.toByte() && buffer[9] == 'E'.toByte() && buffer[10] == 'B'.toByte() && buffer[11] == 'P'.toByte() -> "WEBP"
+                    buffer.size >= 8 && buffer[1] == 'P'.code.toByte() && buffer[2] == 'N'.code.toByte() && buffer[3] == 'G'.code.toByte() -> "PNG"
+                    buffer.size >= 12 && buffer[8] == 'W'.code.toByte() && buffer[9] == 'E'.code.toByte() && buffer[10] == 'B'.code.toByte() && buffer[11] == 'P'.code.toByte() -> "WEBP"
                     else -> "UNKNOWN"
                 }
                 Log.d("SupporterSettingScreen", "🎯 Content-based file type: $fileTypeFromContent")
@@ -683,7 +685,7 @@ fun SupporterSettingScreen(
                         Log.e("SupporterSettingScreen", "❌ Error uploading image: ${e.message}", e)
                     }
                 } else {
-                    if (localPhotoUri != null && !hasPhotoChanges) {
+                    if (localPhotoUri != null) {
                         Log.d("SupporterSettingScreen", "📸 Same image detected - skipping upload")
                         Log.d("SupporterSettingScreen", "localPhotoUri: $localPhotoUri")
                         Log.d("SupporterSettingScreen", "localPhotoHash: $localPhotoHash")
