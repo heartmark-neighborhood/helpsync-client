@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.helpsync.data.Location
 import com.example.helpsync.data.Evaluation
 import com.example.helpsync.repository.CloudMessageRepository
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.functions.ktx.functions
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,8 +24,8 @@ class SupporterViewModel(
     private val _requesterProfile: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
     val requesterProfile: StateFlow<Map<String, String>?> = _requesterProfile
 
-    private val _bleRequestUuid: MutableStateFlow<String?> = MutableStateFlow("string")
-    val bleRequestUuid: StateFlow<String?> = _bleRequestUuid
+    private val _bleRequestUuid: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
+    val bleRequestUuid: StateFlow<Map<String, String>?> = _bleRequestUuid
 
     private val _helpRequestJson: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
     val helpRequestJson: StateFlow<Map<String, String>?> = _helpRequestJson
@@ -48,7 +49,7 @@ class SupporterViewModel(
     fun handleFCMData(data: Map<String, String>) {
         when(data["type"]) {
             "proximity-verification" -> {
-                _bleRequestUuid.value = data["proximityVerificationId"]
+                _bleRequestUuid.value = data
                 helpRequestId.value = data["helpRequestId"]
             }
             "help-request" -> {
@@ -56,18 +57,17 @@ class SupporterViewModel(
             }
         }
     }
-    fun callNotifyProximityVerificationResult(scanResult: Boolean) {
+    fun callHandleProximityVerificationResult(scanResult: Boolean) {
         viewModelScope.launch {
             try {
                 val functions = Firebase.functions("asia-northeast2")
-                val result = if (scanResult) "verified"
-                else "failed"
+                val uid: String? = FirebaseAuth.getInstance().currentUser?.uid
                 val data = hashMapOf(
-                    "result" to result
+                    "verificationResult" to scanResult,
+                    "helpRequestId" to helpRequestId,
+                    "userId" to uid
                 )
-                val callResult =
-                    functions.getHttpsCallable("notifyProximityVerificationResult").call(data)
-                        .await()
+                val callResult = functions.getHttpsCallable("handleProximityVerificationResult").call(data).await()
             } catch(e: Exception){
                 Log.d("Error", "failed to call notifyProximityVerificationResult")
             }
@@ -93,6 +93,32 @@ class SupporterViewModel(
                 else Log.d("Debug", "否認が受理されました")
             } catch(e: Exception) {
                 Log.d("Error", "failed to call respondToHelpRequest")
+            }
+        }
+    }
+
+    fun callUpdateDeviceLocation(latitude: Double, longitude: Double) {
+        viewModelScope.launch {
+            val deviceId = try {
+                cloudMessageRepository.getDeviceId()
+            } catch(e: Exception) {
+                Log.d("Error", "deviceIdの取得に失敗しました")
+            }
+            try {
+                val functions = Firebase.functions("asia-northeast2")
+                val locationMap = hashMapOf(
+                    "latitude" to latitude,
+                    "longitude" to longitude
+                )
+                val data = hashMapOf(
+                    "location" to locationMap,
+                    "deviceId" to deviceId
+                )
+
+                val callResult = functions.getHttpsCallable("updateDeviceLocation").call(data).await()
+            } catch(e: Exception) {
+                Log.d("Error", "updateDeviceLocationの呼び出しに失敗しました")
+                Log.d("Error", "エラーメッセージ: ${e.message}")
             }
         }
     }
