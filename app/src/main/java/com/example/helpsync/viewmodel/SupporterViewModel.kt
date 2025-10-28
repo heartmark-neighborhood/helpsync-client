@@ -23,8 +23,8 @@ class SupporterViewModel(
     private val _requesterProfile: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
     val requesterProfile: StateFlow<Map<String, String>?> = _requesterProfile
 
-    private val _bleRequestUuid: MutableStateFlow<String?> = MutableStateFlow("string")
-    val bleRequestUuid: StateFlow<String?> = _bleRequestUuid
+    private val _bleRequestUuid: MutableStateFlow<Map<String, String>?> = MutableStateFlow("string")
+    val bleRequestUuid: StateFlow<Map<String, String>?> = _bleRequestUuid
 
     private val _helpRequestJson: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
     val helpRequestJson: StateFlow<Map<String, String>?> = _helpRequestJson
@@ -48,7 +48,7 @@ class SupporterViewModel(
     fun handleFCMData(data: Map<String, String>) {
         when(data["type"]) {
             "proximity-verification" -> {
-                _bleRequestUuid.value = data["proximityVerificationId"]
+                _bleRequestUuid.value = data
                 helpRequestId.value = data["helpRequestId"]
             }
             "help-request" -> {
