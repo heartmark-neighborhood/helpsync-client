@@ -4,8 +4,6 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.helpsync.data.Location
-import com.example.helpsync.data.Evaluation
 import com.example.helpsync.repository.CloudMessageRepository
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.functions.ktx.functions
@@ -17,8 +15,8 @@ import kotlinx.coroutines.tasks.await
 class HelpMarkHolderViewModel(
     private val cloudMessageRepository: CloudMessageRepository
 ) : ViewModel() {
-    private val _bleRequestUuid: MutableStateFlow<String?> = MutableStateFlow("string")
-    val bleRequestUuid: StateFlow<String?> = _bleRequestUuid
+    private val _bleRequestUuid: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
+    val bleRequestUuid: StateFlow<Map<String, String>?> = _bleRequestUuid
 
     private val _helpRequestJson: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
     val helpRequestJson: StateFlow<Map<String, String>?> = _helpRequestJson
@@ -44,7 +42,7 @@ class HelpMarkHolderViewModel(
     {
         when(data["type"]) {
             "proximity-verification" -> {
-                _bleRequestUuid.value = data["proximityVerificationId"]
+                _bleRequestUuid.value = data
 
             }
             "help-request" -> {
@@ -130,10 +128,13 @@ class HelpMarkHolderViewModel(
         viewModelScope.launch {
             try {
                 val functions = Firebase.functions("asis-northeast2")
-                val evaluation = Evaluation(rating, comment)
+                val evaluationMap = hashMapOf(
+                    "rating" to rating,
+                    "comment" to comment
+                )
                 val data = hashMapOf(
                     "helpRequestId" to helpRequestId.value,
-                    "evaluation" to evaluation
+                    "evaluation" to evaluationMap
                 )
                 val callResult = functions.getHttpsCallable("completeHelp").call(data).await()
             } catch(e: Exception) {

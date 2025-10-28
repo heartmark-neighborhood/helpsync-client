@@ -2,7 +2,6 @@ package com.example.helpsync.repository
 
 import android.util.Log
 import com.example.helpsync.data.DeviceIdDataSource
-import com.example.helpsync.viewmodel.Evaluation
 import com.google.firebase.functions.ktx.functions
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.channels.BufferOverflow
