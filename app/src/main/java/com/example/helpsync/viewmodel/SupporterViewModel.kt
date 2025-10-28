@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.helpsync.data.Location
 import com.example.helpsync.data.Evaluation
 import com.example.helpsync.repository.CloudMessageRepository
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.functions.ktx.functions
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,18 +57,17 @@ class SupporterViewModel(
             }
         }
     }
-    fun callNotifyProximityVerificationResult(scanResult: Boolean) {
+    fun callHandleProximityVerificationResult(scanResult: Boolean) {
         viewModelScope.launch {
             try {
                 val functions = Firebase.functions("asia-northeast2")
-                val result = if (scanResult) "verified"
-                else "failed"
+                val uid: String? = FirebaseAuth.getInstance().currentUser?.uid
                 val data = hashMapOf(
-                    "result" to result
+                    "verificationResult" to scanResult,
+                    "helpRequestId" to helpRequestId,
+                    "userId" to uid
                 )
-                val callResult =
-                    functions.getHttpsCallable("notifyProximityVerificationResult").call(data)
-                        .await()
+                val callResult = functions.getHttpsCallable("handleProximityVerificationResult").call(data).await()
             } catch(e: Exception){
                 Log.d("Error", "failed to call notifyProximityVerificationResult")
             }
