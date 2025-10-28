@@ -23,7 +23,7 @@ class SupporterViewModel(
     private val _requesterProfile: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
     val requesterProfile: StateFlow<Map<String, String>?> = _requesterProfile
 
-    private val _bleRequestUuid: MutableStateFlow<Map<String, String>?> = MutableStateFlow("string")
+    private val _bleRequestUuid: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
     val bleRequestUuid: StateFlow<Map<String, String>?> = _bleRequestUuid
 
     private val _helpRequestJson: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
