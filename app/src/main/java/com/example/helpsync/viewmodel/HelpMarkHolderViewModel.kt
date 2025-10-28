@@ -130,10 +130,13 @@ class HelpMarkHolderViewModel(
         viewModelScope.launch {
             try {
                 val functions = Firebase.functions("asis-northeast2")
-                val evaluation = Evaluation(rating, comment)
+                val evaluationMap = hashMapOf(
+                    "rating" to rating,
+                    "comment" to comment
+                )
                 val data = hashMapOf(
                     "helpRequestId" to helpRequestId.value,
-                    "evaluation" to evaluation
+                    "evaluation" to evaluationMap
                 )
                 val callResult = functions.getHttpsCallable("completeHelp").call(data).await()
             } catch(e: Exception) {
