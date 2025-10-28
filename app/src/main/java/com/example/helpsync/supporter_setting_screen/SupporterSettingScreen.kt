@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -25,16 +24,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import android.util.Log
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OutOfQuotaPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import coil.compose.AsyncImage
+import com.example.helpsync.location_worker.LocationWorker
 import com.example.helpsync.viewmodel.UserViewModel
 import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 
 
 @Composable
@@ -474,7 +479,6 @@ fun SupporterSettingScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         var backgroundLocationEnabled by remember { mutableStateOf(false) }
-        val context = LocalContext.current
         val fineLocationPermission = android.Manifest.permission.ACCESS_FINE_LOCATION
         val backgroundLocationPermission = android.Manifest.permission.ACCESS_BACKGROUND_LOCATION
 
@@ -513,6 +517,32 @@ fun SupporterSettingScreen(
                 }
             }
         )
+
+        LaunchedEffect(backgroundLocationEnabled) {
+            val workManager = WorkManager.getInstance(context)
+            if (backgroundLocationEnabled) {
+                Log.d("SupporterSettingScreen", "バックグラウンドでの位置情報が有効になりました。WorkManagerのタスクを開始します。")
+                val constraints = Constraints.Builder()
+                    .setRequiresBatteryNotLow(true)
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+
+                val periodicWorkRequest =
+                    PeriodicWorkRequestBuilder<LocationWorker>(15, TimeUnit.MINUTES)
+                        .setConstraints(constraints)
+                        .build()
+                workManager.enqueueUniquePeriodicWork(
+                    LocationWorker.WORK_NAME,
+                    ExistingPeriodicWorkPolicy.KEEP, // 既存のタスクがあれば何もしない
+                    periodicWorkRequest
+                )
+                Log.d("SupporterSettingScreen", "WorkManagerのタスク (${LocationWorker.WORK_NAME}) をキューに追加しました。")
+            } else {
+                Log.d("SupporterSettingScreen", "バックグラウンドでの位置情報が無効になりました。WorkManagerのタスクをキャンセルします。")
+                workManager.cancelUniqueWork(LocationWorker.WORK_NAME)
+                Log.d("SupporterSettingScreen", "WorkManagerのタスク (${LocationWorker.WORK_NAME}) をキャンセルしました。")
+            }
+        }
 
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
