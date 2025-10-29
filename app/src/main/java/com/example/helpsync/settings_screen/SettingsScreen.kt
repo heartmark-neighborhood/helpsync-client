@@ -28,9 +28,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import coil.compose.AsyncImage
 import com.example.helpsync.viewmodel.UserViewModel
+import com.example.helpsync.viewmodel.DeviceManagementVewModel
 import java.security.MessageDigest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,7 +45,8 @@ fun SettingsScreen(
     onBackClick: () -> Unit = {},
     onCompleteClick: () -> Unit = {},
     onPhotoSave: (Uri) -> Unit = {},
-    userViewModel: UserViewModel = viewModel(),
+    userViewModel: UserViewModel = koinViewModel(),
+    deviceViewModel: DeviceManagementVewModel = koinViewModel(),
     onSignOut: () -> Unit = {}
 ) {
     // ローカルで状態を管理
@@ -465,6 +467,7 @@ fun SettingsScreen(
             OutlinedButton(
                 onClick = {
                     Log.d("SettingsScreen", "Sign out button clicked")
+                    deviceViewModel.calldeleteDevice()
                     userViewModel.signOut()
                     onSignOut()
                 },

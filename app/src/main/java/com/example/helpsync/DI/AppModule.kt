@@ -8,9 +8,10 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.example.helpsync.repository.CloudMessageRepository
 import com.example.helpsync.data.DeviceIdDataSource
 import org.koin.dsl.module
-import org.koin.compose.viewmodel.dsl.viewModel
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.android.ext.koin.androidContext
+import com.example.helpsync.repository.CloudMessageRepositoryImpl
+import com.example.helpsync.viewmodel.DeviceManagementVewModel
 import com.example.helpsync.viewmodel.HelpMarkHolderViewModel
 import com.example.helpsync.viewmodel.UserViewModel
 
@@ -26,5 +27,6 @@ val appModule = module{
     single<CloudMessageRepository> { CloudMessageRepositoryImpl(get()) }
 
     viewModel { HelpMarkHolderViewModel(get()) }
+    viewModel { DeviceManagementVewModel(get()) }
     viewModel { UserViewModel() }
 }

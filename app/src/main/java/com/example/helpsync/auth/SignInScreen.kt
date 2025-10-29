@@ -12,15 +12,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import com.example.helpsync.viewmodel.UserViewModel
+import com.example.helpsync.viewmodel.DeviceManagementVewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignInScreen(
     onNavigateToSignUp: () -> Unit,
     onSignInSuccess: () -> Unit,
-    userViewModel: UserViewModel = viewModel()
+    userViewModel: UserViewModel = koinViewModel(),
+    deviceViewModel: DeviceManagementVewModel = koinViewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -31,9 +33,11 @@ fun SignInScreen(
         isFormValid = email.isNotBlank() && password.isNotBlank()
     }
 
-    // サインイン成功時の処理
+    // サインイン成功時の処理: デバイス登録を呼び出す
     LaunchedEffect(userViewModel.isSignedIn) {
         if (userViewModel.isSignedIn) {
+            // 最初はプレースホルダ緯度経度で登録（後で位置情報更新処理が上書きします）
+            deviceViewModel.callRegisterNewDevice(0.0, 0.0)
             onSignInSuccess()
         }
     }

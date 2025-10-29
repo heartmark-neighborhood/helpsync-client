@@ -12,15 +12,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import com.example.helpsync.viewmodel.UserViewModel
+import com.example.helpsync.viewmodel.DeviceManagementVewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpScreen(
     onNavigateToSignIn: () -> Unit,
     onSignUpSuccess: () -> Unit,
-    userViewModel: UserViewModel = viewModel()
+    userViewModel: UserViewModel = koinViewModel(),
+    deviceViewModel: DeviceManagementVewModel = koinViewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -34,9 +36,10 @@ fun SignUpScreen(
                      password == confirmPassword
     }
 
-    // サインアップ成功時の処理
+    // サインアップ成功時の処理: デバイス登録を呼び出す
     LaunchedEffect(userViewModel.isSignedIn) {
         if (userViewModel.isSignedIn) {
+            deviceViewModel.callRegisterNewDevice(0.0, 0.0)
             onSignUpSuccess()
         }
     }

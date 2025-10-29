@@ -13,16 +13,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import com.example.helpsync.data.UserRole
 import com.example.helpsync.viewmodel.UserViewModel
+import com.example.helpsync.viewmodel.DeviceManagementVewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onNavigateToEdit: () -> Unit,
     onSignOut: () -> Unit,
-    userViewModel: UserViewModel = viewModel()
+    userViewModel: UserViewModel = koinViewModel(),
+    deviceViewModel: DeviceManagementVewModel = koinViewModel()
 ) {
     val user = userViewModel.currentUser
     val scrollState = rememberScrollState()
@@ -56,6 +58,7 @@ fun ProfileScreen(
                 
                 // サインアウトボタン
                 IconButton(onClick = {
+                    deviceViewModel.calldeleteDevice()
                     userViewModel.signOut()
                     onSignOut()
                 }) {
@@ -228,6 +231,7 @@ fun ProfileScreen(
 
             Button(
                 onClick = {
+                    deviceViewModel.calldeleteDevice()
                     userViewModel.signOut()
                     onSignOut()
                 },
