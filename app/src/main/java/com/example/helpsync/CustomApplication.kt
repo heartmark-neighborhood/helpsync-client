@@ -9,12 +9,14 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
+import org.koin.android.ext.koin.androidLogger
+import org.koin.androidx.workmanager.koin.workManagerFactory
 
 class CustomApplication : Application() {
         override fun onCreate() {
             super.onCreate()
     
-            android.util.Log.d("AppCheckDebug", "CustomApplication.onCreate() called")
+            Log.d("AppCheckDebug", "CustomApplication.onCreate() called")
             FirebaseApp.initializeApp(this)
             val firebaseAppCheck = FirebaseAppCheck.getInstance()
 
@@ -34,8 +36,10 @@ class CustomApplication : Application() {
             }
     
             startKoin {
+                androidLogger()
                 androidContext(this@CustomApplication)
                 modules(appModule)
+                workManagerFactory()
             }
         }
 }

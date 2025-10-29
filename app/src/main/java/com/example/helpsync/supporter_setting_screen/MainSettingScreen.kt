@@ -5,13 +5,13 @@ import android.util.Log
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.helpsync.nickname_setting.NicknameSetting
 import com.example.helpsync.viewmodel.UserViewModel
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun MainSettingScreen(
-    userViewModel: UserViewModel = viewModel()
+    userViewModel: UserViewModel = koinViewModel()
 ) {
     val currentUser = userViewModel.currentUser
     var nickname by rememberSaveable { mutableStateOf(currentUser?.nickname ?: "") }

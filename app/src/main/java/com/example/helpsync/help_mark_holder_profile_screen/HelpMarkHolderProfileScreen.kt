@@ -27,9 +27,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.helpsync.viewmodel.UserViewModel
+import org.koin.androidx.compose.koinViewModel
 import java.security.MessageDigest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,7 +44,7 @@ fun HelpMarkHolderProfileScreen(
     onCompleteClick: () -> Unit = {},
     onPhotoSave: (Uri) -> Unit = {},
     onSignOut: () -> Unit = {},
-    userViewModel: UserViewModel = viewModel()
+    userViewModel: UserViewModel = koinViewModel()
 ) {
     // ローカルで状態を管理
     var localNickname by remember(nickname) { mutableStateOf(nickname) }

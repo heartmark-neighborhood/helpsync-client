@@ -17,14 +17,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.example.helpsync.R
 import com.example.helpsync.viewmodel.SupporterViewModel
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun RequestAcceptanceScreen(
-    viewModel: SupporterViewModel = viewModel(),
+    viewModel: SupporterViewModel = koinViewModel(),
     onDoneClick: () -> Unit
 ) {
     val helpRequestJson by viewModel.helpRequestJson.collectAsState()
