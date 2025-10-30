@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.helpsync.repository.CloudMessageRepository
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.functions.ktx.functions
 import com.google.firebase.ktx.Firebase
@@ -14,7 +15,8 @@ import kotlinx.coroutines.tasks.await
 
 class LocationWorker(
     private val context: Context,
-    workerParams: WorkerParameters
+    workerParams: WorkerParameters,
+    private val repository: CloudMessageRepository
 ) : CoroutineWorker(context, workerParams) {
 
     companion object {
@@ -45,19 +47,25 @@ class LocationWorker(
             val lon = location.longitude
 
             Log.d("LocationWorker", "fetchAndSendLocation: 位置情報を取得しました。($lat, $lon)")
-            Log.d("LocationWorker", "fetchAndSendLocation: 位置情報をサーバーに送信します。")
 
-            //TODO: ローカルに保存されているdeviceIdを取得し、cloud function呼び出し時に利用するように修正
+            val deviceId = repository.getDeviceId()
+            if (deviceId == null) {
+                Log.d("LocationWorker", "fetchAndSendLocation: deviceIdがnullのため失敗を返します。")
+                return Result.failure()
+            }
+
             val data = hashMapOf(
-                "deviceId" to "sample-id",
+                "deviceId" to deviceId,
                 "location" to hashMapOf(
                     "latitude" to lat,
                     "longitude" to lon,
                 )
             )
 
+            Log.d("LocationWorker", "fetchAndSendLocation: 位置情報をサーバーに送信します。($data)")
+
             // Firebase Functions SDK を使った呼び出し (HTTPSCallable)
-            Firebase.functions
+            Firebase.functions("asia-northeast2")
                 .getHttpsCallable("updateDeviceLocation")
                 .call(data)
                 .await()

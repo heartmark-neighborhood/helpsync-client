@@ -18,8 +18,8 @@ import com.example.helpsync.supporter_setting_screen.SupporterSettingScreen
 import com.example.helpsync.viewmodel.UserViewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import org.koin.androidx.compose.koinViewModel
 import com.example.helpsync.viewmodel.SupporterViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 
 enum class MainScreenTab(
     val icon: ImageVector,
@@ -44,7 +44,7 @@ fun SupporterScreen(
     val tabNavController = rememberNavController()
     val currentDestination by tabNavController.currentBackStackEntryAsState()
     val currentRoute = currentDestination?.destination?.route
-    val supporterViewModel: SupporterViewModel = viewModel()
+    val supporterViewModel: SupporterViewModel = koinViewModel()
 
     Scaffold(
         bottomBar = {

@@ -87,7 +87,18 @@ fun HelpMarkHolderHomeScreen(
 
     LaunchedEffect(bleRequestUuid) {
         // UUIDがnullでない場合のみAdvertiseを開始
-        bleRequestUuid?.let { uuid ->
+        bleRequestUuid?.let { result ->
+            val uuid = result["proximityVerificationId"]
+            if(uuid == null){
+                Log.e("HOLDER_BLE", "UUID is null")
+                return@let
+            }
+
+            val expiredAt = result["expiredAt"]
+            if(expiredAt == null){
+                Log.e("HOLDER_BLE", "expiredAt is null")
+                return@let
+            }
             Log.d("HOLDER_BLE", "BLE Advertise開始: UUID=$uuid")
         
             try {

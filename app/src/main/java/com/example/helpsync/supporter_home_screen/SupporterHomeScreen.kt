@@ -20,14 +20,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.helpsync.blescanner.BLEScanner
 import com.example.helpsync.viewmodel.SupporterViewModel
+import org.koin.androidx.compose.koinViewModel
 
 @SuppressLint("NewApi")
 @Composable
 fun SupporterHomeScreen(
-    viewModel: SupporterViewModel = viewModel(),
+    viewModel: SupporterViewModel = koinViewModel(),
     onNavigateToAcceptance: (requestId: String) -> Unit
 ) {
     val context = LocalContext.current
@@ -56,7 +56,12 @@ fun SupporterHomeScreen(
 
     // --- BLE Scan Start Trigger ---
     LaunchedEffect(bleRequestUuid) {
-        val uuidToScan = bleRequestUuid
+        if(bleRequestUuid == null){
+            Log.d("SupporterHome", "No UUID to scan yet.")
+            return@LaunchedEffect
+        }
+        val uuidToScan = bleRequestUuid!!["proximityVerificationId"]
+
         if (!uuidToScan.isNullOrBlank() && uuidToScan != "string") {
             Log.d("SupporterHome", "🚀 Received scan request for UUID: $uuidToScan")
             val scanIntent = Intent(context, BLEScanner::class.java).apply {
@@ -88,7 +93,7 @@ fun SupporterHomeScreen(
                     if (found && !foundRequestId.isNullOrBlank() && foundRequestId == expectedRequestId) {
                         Log.d("SupporterHome", "✅ Scan successful and ID matches!")
                         Toast.makeText(context, "ヘルプ要請を発見！", Toast.LENGTH_SHORT).show()
-                        viewModel.callNotifyProximityVerificationResult(scanResult = true)
+                        viewModel.callHandleProximityVerificationResult(scanResult = true)
                         context.stopService(Intent(context, BLEScanner::class.java))
                     } else {
                         Log.w("SupporterHome", "Scan failed, timed out, or ID mismatch.")
@@ -127,7 +132,8 @@ fun SupporterHomeScreen(
     // --- UI ---
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            if (bleRequestUuid.isNullOrBlank() || bleRequestUuid == "string") {
+            val uuid = bleRequestUuid?.get("proximityVerificationId")
+            if (uuid.isNullOrBlank() || uuid == "string") {
                 Text("近くのヘルプ要請を待機中...")
             } else {
                 CircularProgressIndicator()
