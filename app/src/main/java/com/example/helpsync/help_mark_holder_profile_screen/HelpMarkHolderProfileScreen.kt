@@ -1,5 +1,6 @@
 package com.example.helpsync.help_mark_holder_profile_screen
 
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -13,8 +14,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,11 +30,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import android.Manifest
+import android.os.Build
+import androidx.annotation.RequiresApi
 import coil.compose.AsyncImage
+import com.example.helpsync.location_worker.LocationWorker
 import com.example.helpsync.viewmodel.UserViewModel
 import org.koin.androidx.compose.koinViewModel
 import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HelpMarkHolderProfileScreen(
@@ -281,9 +296,9 @@ fun HelpMarkHolderProfileScreen(
 
             // 画像選択エリア - 直接タップで選択
             Card(
-                onClick = { 
+                onClick = {
                     android.util.Log.d("HelpMarkHolderProfileScreen", "🖼️ Image area clicked!")
-                    imagePickerLauncher.launch("image/*") 
+                    imagePickerLauncher.launch("image/*")
                 },
                 shape = CircleShape,
                 modifier = Modifier
@@ -311,7 +326,7 @@ fun HelpMarkHolderProfileScreen(
                 ) {
                     // 表示する画像を決定
                     val imageToDisplay = localPhotoUri ?: currentUser?.iconUrl
-                    
+
                     if (hasExistingPhoto && imageToDisplay != null) {
                         AsyncImage(
                             model = imageToDisplay,
@@ -425,7 +440,7 @@ fun HelpMarkHolderProfileScreen(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             // ニックネーム入力セクション
             Text(
                 text = "ニックネーム",
@@ -433,9 +448,9 @@ fun HelpMarkHolderProfileScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth()
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             OutlinedTextField(
                 value = localNickname,
                 onValueChange = { localNickname = it },
@@ -443,13 +458,15 @@ fun HelpMarkHolderProfileScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = if (hasNicknameChanges) Color(0xFF4CAF50) else Color(0xFF2196F3),
+                    focusedBorderColor = if (hasNicknameChanges) Color(0xFF4CAF50) else Color(
+                        0xFF2196F3
+                    ),
                     unfocusedBorderColor = if (hasNicknameChanges) Color(0xFF81C784) else MaterialTheme.colorScheme.outline
                 )
             )
-            
+
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             // 支援内容セクション
             Text(
                 text = "身体的特徴",
@@ -457,9 +474,9 @@ fun HelpMarkHolderProfileScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth()
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             OutlinedTextField(
                 value = localPhysicalFeatures,
                 onValueChange = { localPhysicalFeatures = it },
@@ -474,23 +491,196 @@ fun HelpMarkHolderProfileScreen(
                 },
                 shape = RoundedCornerShape(8.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = if (hasPhysicalFeaturesChanges) Color(0xFF4CAF50) else Color(0xFF2196F3),
-                    unfocusedBorderColor = if (hasPhysicalFeaturesChanges) Color(0xFF81C784) else Color(0xFFE0E0E0)
+                    focusedBorderColor = if (hasPhysicalFeaturesChanges) Color(0xFF4CAF50) else Color(
+                        0xFF2196F3
+                    ),
+                    unfocusedBorderColor = if (hasPhysicalFeaturesChanges) Color(0xFF81C784) else Color(
+                        0xFFE0E0E0
+                    )
                 )
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Text(
                 text = "身体的特徴を記入することで、適切な支援者とマッチングしやすくなります",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFF757575),
                 modifier = Modifier.fillMaxWidth()
             )
-            
+
             Spacer(modifier = Modifier.height(48.dp))
+
+            var backgroundLocationEnabled by remember { mutableStateOf(false) }
+            val fineLocationPermission = Manifest.permission.ACCESS_FINE_LOCATION
+            val backgroundLocationPermission = Manifest.permission.ACCESS_BACKGROUND_LOCATION
+
+            fun checkPermissions() {
+                val fineLocationGranted = ContextCompat.checkSelfPermission(
+                    context,
+                    fineLocationPermission
+                ) == PackageManager.PERMISSION_GRANTED
+                val backgroundLocationGranted = ContextCompat.checkSelfPermission(
+                    context,
+                    backgroundLocationPermission
+                ) == PackageManager.PERMISSION_GRANTED
+                backgroundLocationEnabled = fineLocationGranted && backgroundLocationGranted
+                Log.d(
+                    "HelpMarkHolderProfileScreen",
+                    "Permissions checked: fineLocation=$fineLocationGranted, backgroundLocation=$backgroundLocationGranted"
+                )
+            }
+
+            LaunchedEffect(Unit) {
+                checkPermissions()
+            }
+
+            val backgroundLocationLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission(),
+                onResult = { isGranted ->
+                    backgroundLocationEnabled = isGranted
+                    if (isGranted) {
+                        Log.d(
+                            "HelpMarkHolderProfileScreen",
+                            "Background location permission GRANTED"
+                        )
+                    } else {
+                        Log.e(
+                            "HelpMarkHolderProfileScreen",
+                            "Background location permission DENIED"
+                        )
+                    }
+                }
+            )
+
+            val fineLocationLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission(),
+                onResult = { isGranted ->
+                    if (isGranted) {
+                        Log.d(
+                            "HelpMarkHolderProfileScreen",
+                            "Fine location permission GRANTED, requesting background location..."
+                        )
+                        backgroundLocationLauncher.launch(backgroundLocationPermission)
+                    } else {
+                        Log.e("HelpMarkHolderProfileScreen", "Fine location permission DENIED")
+                        backgroundLocationEnabled = false
+                    }
+                }
+            )
+
+            LaunchedEffect(backgroundLocationEnabled) {
+                val workManager = WorkManager.getInstance(context)
+                if (backgroundLocationEnabled) {
+                    Log.d(
+                        "HelpMarkHolderProfileScreen",
+                        "バックグラウンドでの位置情報が有効になりました。WorkManagerのタスクを開始します。"
+                    )
+                    val constraints = Constraints.Builder()
+                        .setRequiresBatteryNotLow(true)
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build()
+
+                    Log.d(
+                        "HelpMarkHolderProfileScreen",
+                        "Building PeriodicWorkRequest for LocationWorker."
+                    )
+                    val periodicWorkRequest =
+                        PeriodicWorkRequestBuilder<LocationWorker>(15, TimeUnit.MINUTES)
+                            .setConstraints(constraints)
+                            .build()
+                    workManager.enqueueUniquePeriodicWork(
+                        LocationWorker.WORK_NAME,
+                        ExistingPeriodicWorkPolicy.UPDATE, // 既存のタスクがあれば何もしない
+                        periodicWorkRequest
+                    )
+                    Log.d(
+                        "HelpMarkHolderProfileScreen",
+                        "WorkManager task (${LocationWorker.WORK_NAME}) enqueued with policy UPDATE."
+                    )
+                } else {
+                    Log.d(
+                        "HelpMarkHolderProfileScreen",
+                        "Background location disabled. Cancelling WorkManager task."
+                    )
+                    workManager.cancelUniqueWork(LocationWorker.WORK_NAME)
+                    Log.d(
+                        "HelpMarkHolderProfileScreen",
+                        "WorkManager task (${LocationWorker.WORK_NAME}) cancelled."
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "バックグラウンドでの位置情報",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Status Indicator
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val statusIcon =
+                        if (backgroundLocationEnabled) Icons.Default.Check else Icons.Default.Warning
+                    val iconTint =
+                        if (backgroundLocationEnabled) Color(0xFF4CAF50) else Color(0xFFFFA000)
+                    Icon(imageVector = statusIcon, contentDescription = "Status", tint = iconTint)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (backgroundLocationEnabled) "許可されています" else "許可されていません",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "アプリがバックグラウンドにあるときでも、助けを必要としている人を見つけるために使用されます。この機能を有効にするには、位置情報の権限を「常に許可」に設定する必要があります。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Action Button
+                Button(
+                    onClick = {
+                        if (backgroundLocationEnabled) {
+                            // Open App Settings
+                            Log.d("HelpMarkHolderProfileScreen", "Opening app settings...")
+                            val intent =
+                                android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            val uri = Uri.fromParts("package", context.packageName, null)
+                            intent.data = uri
+                            context.startActivity(intent)
+                        } else {
+                            // Request Permissions
+                            Log.d(
+                                "HelpMarkHolderProfileScreen",
+                                "Requesting background location permission..."
+                            )
+                            val fineLocationGranted = ContextCompat.checkSelfPermission(
+                                context,
+                                fineLocationPermission
+                            ) == PackageManager.PERMISSION_GRANTED
+                            if (fineLocationGranted) {
+                                backgroundLocationLauncher.launch(backgroundLocationPermission)
+                            } else {
+                                fineLocationLauncher.launch(fineLocationPermission)
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (backgroundLocationEnabled) "設定を開く" else "権限を許可する")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
             
-            // 完了ボタン
+              // 完了ボタン
             Button(
                 onClick = { 
                     if (isLoading) return@Button
