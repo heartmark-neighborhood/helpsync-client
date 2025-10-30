@@ -29,9 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
@@ -535,7 +533,7 @@ fun SupporterSettingScreen(
                         .build()
                 workManager.enqueueUniquePeriodicWork(
                     LocationWorker.WORK_NAME,
-                    ExistingPeriodicWorkPolicy.KEEP, // 既存のタスクがあれば何もしない
+                    ExistingPeriodicWorkPolicy.UPDATE, // 既存のタスクがあれば置き換える
                     periodicWorkRequest
                 )
                 Log.d("SupporterSettingScreen", "WorkManagerのタスク (${LocationWorker.WORK_NAME}) をキューに追加しました。")
