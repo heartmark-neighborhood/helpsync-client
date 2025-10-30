@@ -53,6 +53,16 @@ class DeviceManagementVewModel(
             }
         }
     }
+    
+    suspend fun isDeviceRegistered(): Boolean {
+        return try {
+            val deviceId = cloudMessageRepository.getDeviceId()
+            deviceId != null
+        } catch(e: Exception) {
+            Log.d("DeviceManagement", "デバイスID確認エラー: ${e.message}")
+            false
+        }
+    }
 
     fun calldeleteDevice() {
         viewModelScope.launch {
