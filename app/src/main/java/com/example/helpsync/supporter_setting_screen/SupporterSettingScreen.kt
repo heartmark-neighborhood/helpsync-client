@@ -40,6 +40,8 @@ import androidx.work.WorkManager
 import coil.compose.AsyncImage
 import com.example.helpsync.location_worker.LocationWorker
 import com.example.helpsync.viewmodel.UserViewModel
+import com.example.helpsync.viewmodel.DeviceManagementVewModel
+import org.koin.androidx.compose.koinViewModel
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 
@@ -54,6 +56,7 @@ fun SupporterSettingScreen(
     onEditClick: (String) -> Unit = {},
     onPhotoSave: (Uri) -> Unit = {},
     userViewModel: UserViewModel, // デフォルト値を削除して必須パラメータに
+    deviceViewModel: DeviceManagementVewModel = koinViewModel(),
     onSignOut: () -> Unit = {}
 ) {
     // ローカルでニックネームと写真の状態を管理
@@ -762,6 +765,7 @@ fun SupporterSettingScreen(
             onClick = {
                 Log.d("SupporterSettingScreen", "Sign out button clicked")
                 userViewModel.signOut()
+                deviceViewModel.calldeleteDevice()
                 onSignOut()
             },
             modifier = Modifier.fillMaxWidth(),
