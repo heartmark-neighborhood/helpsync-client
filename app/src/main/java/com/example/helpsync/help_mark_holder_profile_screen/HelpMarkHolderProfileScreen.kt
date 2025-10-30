@@ -91,7 +91,7 @@ fun HelpMarkHolderProfileScreen(
                 hashBytes.joinToString("") { "%02x".format(it) }
             } else null
         } catch (e: Exception) {
-            android.util.Log.e("HelpMarkHolderProfileScreen", "Error calculating image hash: ${e.message}")
+            Log.e("HelpMarkHolderProfileScreen", "Error calculating image hash: ${e.message}")
             null
         }
     }
@@ -99,9 +99,9 @@ fun HelpMarkHolderProfileScreen(
     // 初回読み込み時にユーザー情報を設定
     LaunchedEffect(currentUser) {
         currentUser?.let { user ->
-            android.util.Log.d("HelpMarkHolderProfileScreen", "👤 Current user loaded: ${user.nickname}")
-            android.util.Log.d("HelpMarkHolderProfileScreen", "📸 Existing iconUrl: ${user.iconUrl}")
-            android.util.Log.d("HelpMarkHolderProfileScreen", "📝 Existing physicalFeatures: ${user.physicalFeatures}")
+            Log.d("HelpMarkHolderProfileScreen", "👤 Current user loaded: ${user.nickname}")
+            Log.d("HelpMarkHolderProfileScreen", "📸 Existing iconUrl: ${user.iconUrl}")
+            Log.d("HelpMarkHolderProfileScreen", "📝 Existing physicalFeatures: ${user.physicalFeatures}")
             
             // データが空の場合は既存のものを設定
             if (localNickname.isEmpty()) {
@@ -112,8 +112,8 @@ fun HelpMarkHolderProfileScreen(
             }
             
             // 新しく選択された画像がない場合は、既存のiconUrlを使用
-            if (localPhotoUri == null && !user.iconUrl.isNullOrEmpty()) {
-                android.util.Log.d("HelpMarkHolderProfileScreen", "🔄 Using existing iconUrl for display")
+            if (localPhotoUri == null && user.iconUrl.isNotEmpty()) {
+                Log.d("HelpMarkHolderProfileScreen", "🔄 Using existing iconUrl for display")
             }
         }
     }
@@ -143,37 +143,37 @@ fun HelpMarkHolderProfileScreen(
     
     // デバッグログを追加
     LaunchedEffect(localNickname, localPhysicalFeatures, localPhotoUri, currentUser) {
-        android.util.Log.d("HelpMarkHolderProfileScreen", "=== Button State Debug ===")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "localNickname: '$localNickname'")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "localPhysicalFeatures: '$localPhysicalFeatures'")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "localPhotoUri: $localPhotoUri")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "hasExistingPhoto: $hasExistingPhoto")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "isFormValid: $isFormValid")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "isInitialSetup: $isInitialSetup")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "hasAnyChanges: $hasAnyChanges")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "isButtonEnabled: $isButtonEnabled")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "Current user nickname: '${currentUser?.nickname}'")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "Current user physicalFeatures: '${currentUser?.physicalFeatures}'")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "Current user iconUrl: '${currentUser?.iconUrl}'")
+        Log.d("HelpMarkHolderProfileScreen", "=== Button State Debug ===")
+        Log.d("HelpMarkHolderProfileScreen", "localNickname: '$localNickname'")
+        Log.d("HelpMarkHolderProfileScreen", "localPhysicalFeatures: '$localPhysicalFeatures'")
+        Log.d("HelpMarkHolderProfileScreen", "localPhotoUri: $localPhotoUri")
+        Log.d("HelpMarkHolderProfileScreen", "hasExistingPhoto: $hasExistingPhoto")
+        Log.d("HelpMarkHolderProfileScreen", "isFormValid: $isFormValid")
+        Log.d("HelpMarkHolderProfileScreen", "isInitialSetup: $isInitialSetup")
+        Log.d("HelpMarkHolderProfileScreen", "hasAnyChanges: $hasAnyChanges")
+        Log.d("HelpMarkHolderProfileScreen", "isButtonEnabled: $isButtonEnabled")
+        Log.d("HelpMarkHolderProfileScreen", "Current user nickname: '${currentUser?.nickname}'")
+        Log.d("HelpMarkHolderProfileScreen", "Current user physicalFeatures: '${currentUser?.physicalFeatures}'")
+        Log.d("HelpMarkHolderProfileScreen", "Current user iconUrl: '${currentUser?.iconUrl}'")
     }
     
     // 画像選択のランチャー
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        android.util.Log.d("HelpMarkHolderProfileScreen", "=== 画像選択結果 ===")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "Selected URI: $uri")
+        Log.d("HelpMarkHolderProfileScreen", "=== 画像選択結果 ===")
+        Log.d("HelpMarkHolderProfileScreen", "Selected URI: $uri")
         uri?.let { selectedUri ->
             try {
                 val contentResolver = context.contentResolver
                 val mimeType = contentResolver.getType(selectedUri)
-                android.util.Log.d("HelpMarkHolderProfileScreen", "📄 MIME type: $mimeType")
+                Log.d("HelpMarkHolderProfileScreen", "📄 MIME type: $mimeType")
                 
                 // ファイルサイズ取得
                 val inputStream = contentResolver.openInputStream(selectedUri)
                 val fileSize = inputStream?.available() ?: 0
                 inputStream?.close()
-                android.util.Log.d("HelpMarkHolderProfileScreen", "📏 File size: $fileSize bytes")
+                Log.d("HelpMarkHolderProfileScreen", "📏 File size: $fileSize bytes")
                 
                 // ファイル内容の最初の部分を読んで分析
                 val previewStream = contentResolver.openInputStream(selectedUri)
@@ -184,7 +184,7 @@ fun HelpMarkHolderProfileScreen(
                 val hexString = buffer.take(bytesRead).joinToString(" ") { 
                     String.format("%02X", it) 
                 }
-                android.util.Log.d("HelpMarkHolderProfileScreen", "🔍 File header (first $bytesRead bytes): $hexString")
+                Log.d("HelpMarkHolderProfileScreen", "🔍 File header (first $bytesRead bytes): $hexString")
                 
                 // ファイル種別を内容から推測
                 val fileTypeFromContent = when {
@@ -193,30 +193,30 @@ fun HelpMarkHolderProfileScreen(
                     buffer.size >= 12 && buffer[8] == 'W'.code.toByte() && buffer[9] == 'E'.code.toByte() && buffer[10] == 'B'.code.toByte() && buffer[11] == 'P'.code.toByte() -> "WEBP"
                     else -> "UNKNOWN"
                 }
-                android.util.Log.d("HelpMarkHolderProfileScreen", "🎯 Content-based file type: $fileTypeFromContent")
+                Log.d("HelpMarkHolderProfileScreen", "🎯 Content-based file type: $fileTypeFromContent")
                 
                 // 画像ファイルの妥当性チェック
                 val isValidImageMime = mimeType?.startsWith("image/") == true
                 val isValidImageContent = fileTypeFromContent != "UNKNOWN"
                 
                 if (!isValidImageMime && !isValidImageContent) {
-                    android.util.Log.e("HelpMarkHolderProfileScreen", "❌ ERROR: Selected file is not a valid image!")
+                    Log.e("HelpMarkHolderProfileScreen", "❌ ERROR: Selected file is not a valid image!")
                 } else {
-                    android.util.Log.d("HelpMarkHolderProfileScreen", "✅ Valid image file selected")
+                    Log.d("HelpMarkHolderProfileScreen", "✅ Valid image file selected")
                     localPhotoUri = selectedUri
                     
                     // 画像のハッシュ値を計算（重複チェック用）
-                    android.util.Log.d("HelpMarkHolderProfileScreen", "🔍 Calculating image hash for duplicate detection...")
+                    Log.d("HelpMarkHolderProfileScreen", "🔍 Calculating image hash for duplicate detection...")
                     localPhotoHash = calculateImageHash(selectedUri)
-                    android.util.Log.d("HelpMarkHolderProfileScreen", "📝 Image hash: $localPhotoHash")
+                    Log.d("HelpMarkHolderProfileScreen", "📝 Image hash: $localPhotoHash")
                     
                     onPhotoChange(selectedUri)
                 }
             } catch (e: Exception) {
-                android.util.Log.e("HelpMarkHolderProfileScreen", "❌ Error analyzing selected file: ${e.message}", e)
+                Log.e("HelpMarkHolderProfileScreen", "❌ Error analyzing selected file: ${e.message}", e)
             }
         } ?: run {
-            android.util.Log.d("HelpMarkHolderProfileScreen", "❌ 画像選択がキャンセルされました")
+            Log.d("HelpMarkHolderProfileScreen", "❌ 画像選択がキャンセルされました")
         }
     }
 
@@ -297,7 +297,7 @@ fun HelpMarkHolderProfileScreen(
             // 画像選択エリア - 直接タップで選択
             Card(
                 onClick = {
-                    android.util.Log.d("HelpMarkHolderProfileScreen", "🖼️ Image area clicked!")
+                    Log.d("HelpMarkHolderProfileScreen", "🖼️ Image area clicked!")
                     imagePickerLauncher.launch("image/*")
                 },
                 shape = CircleShape,
