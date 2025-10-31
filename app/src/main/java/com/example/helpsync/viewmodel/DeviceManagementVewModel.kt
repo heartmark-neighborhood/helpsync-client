@@ -59,12 +59,13 @@ class DeviceManagementVewModel(
         }
     }
 
-    fun calldeleteDevice() {
+    fun calldeleteDevice(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             val deviceId = try {
                 cloudMessageRepository.getDeviceId()
             } catch(e: Exception) {
                 Log.d("Error", "deviceIdの取得に失敗しました")
+                null
             }
             try{
                 val functions = Firebase.functions("asia-northeast2")
@@ -73,9 +74,13 @@ class DeviceManagementVewModel(
                 )
 
                 val callResult = functions.getHttpsCallable("deleteDevice").call(data).await()
+                Log.d("DeviceManagement", "デバイスの削除に成功しました")
             } catch(e: Exception) {
                 Log.d("Error", "デバイスの削除に失敗しました")
                 Log.d("Error", "Error message: ${e.message}")
+            } finally {
+                // 成功・失敗に関わらずコールバックを実行
+                onComplete()
             }
         }
     }
