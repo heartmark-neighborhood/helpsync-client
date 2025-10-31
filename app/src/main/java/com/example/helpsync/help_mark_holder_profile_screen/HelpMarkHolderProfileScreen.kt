@@ -41,6 +41,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import coil.compose.AsyncImage
 import com.example.helpsync.location_worker.LocationWorker
+import com.example.helpsync.viewmodel.DeviceManagementVewModel
 import com.example.helpsync.viewmodel.UserViewModel
 import org.koin.androidx.compose.koinViewModel
 import java.security.MessageDigest
@@ -59,7 +60,8 @@ fun HelpMarkHolderProfileScreen(
     onCompleteClick: () -> Unit = {},
     onPhotoSave: (Uri) -> Unit = {},
     onSignOut: () -> Unit = {},
-    userViewModel: UserViewModel = koinViewModel()
+    userViewModel: UserViewModel = koinViewModel(),
+    deviceViewModel: DeviceManagementVewModel = koinViewModel()
 ) {
     // ローカルで状態を管理
     var localNickname by remember(nickname) { mutableStateOf(nickname) }
@@ -770,6 +772,10 @@ fun HelpMarkHolderProfileScreen(
                 OutlinedButton(
                     onClick = {
                         Log.d("HelpMarkHolderProfileScreen", "Sign out button clicked")
+                        // デバイス削除を先に実行
+                        deviceViewModel.calldeleteDevice()
+                        Log.d("HelpMarkHolderProfileScreen", "Device deletion called")
+                        // サインアウト処理
                         userViewModel.signOut()
                         onSignOut()
                     },
