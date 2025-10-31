@@ -16,8 +16,7 @@ class DeviceManagementVewModel(
 ) : ViewModel(){
 
     fun callRegisterNewDevice(latitude: Double, longitude: Double) {
-        viewModelScope.launch{
-            var deviceId : String? = ""
+        viewModelScope.launch {
             try {
                 val functions = Firebase.functions("asia-northeast2")
                 val owner = FirebaseAuth.getInstance().currentUser
@@ -36,20 +35,16 @@ class DeviceManagementVewModel(
                 val callResult = functions.getHttpsCallable("registerNewDevice").call(data).await()
 
                 val responseData = callResult.data as? Map<String, Any>
-                deviceId = responseData?.get("deviceId") as? String
-            } catch(e: Exception){
-                Log.d("Error", "デバイスの登録に失敗しました")
-                Log.d("Error", "Error message: ${e.message}")
-            }
-            try {
-                if(deviceId != null) cloudMessageRepository.saveDeviceId(deviceId)
-                else
-                {
-                    Log.d("Error", "deviceIDがnullです")
+                val deviceId = responseData?.get("deviceId") as? String
+
+                if (deviceId != null) {
+                    cloudMessageRepository.saveDeviceId(deviceId)
+                    Log.d("DeviceManagement", "デバイスIDを保存しました: $deviceId")
+                } else {
+                    Log.e("DeviceManagement", "deviceIdがnullです")
                 }
-            } catch(e: Exception) {
-                Log.d("Error", "デバイスの登録に失敗しました")
-                Log.d("Error", "Error message: ${e.message}")
+            } catch (e: Exception) {
+                Log.e("DeviceManagement", "デバイスの登録に失敗しました", e)
             }
         }
     }
