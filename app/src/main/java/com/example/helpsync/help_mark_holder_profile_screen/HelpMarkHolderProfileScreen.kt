@@ -772,12 +772,13 @@ fun HelpMarkHolderProfileScreen(
                 OutlinedButton(
                     onClick = {
                         Log.d("HelpMarkHolderProfileScreen", "Sign out button clicked")
-                        // デバイス削除を先に実行
-                        deviceViewModel.calldeleteDevice()
-                        Log.d("HelpMarkHolderProfileScreen", "Device deletion called")
-                        // サインアウト処理
-                        userViewModel.signOut()
-                        onSignOut()
+                        // デバイス削除を先に実行してから、完了後にサインアウト
+                        deviceViewModel.calldeleteDevice {
+                            Log.d("HelpMarkHolderProfileScreen", "Device deletion completed")
+                            // サインアウト処理
+                            userViewModel.signOut()
+                            onSignOut()
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth(),

@@ -762,9 +762,12 @@ fun SupporterSettingScreen(
         OutlinedButton(
             onClick = {
                 Log.d("SupporterSettingScreen", "Sign out button clicked")
-                userViewModel.signOut()
-                deviceViewModel.calldeleteDevice()
-                onSignOut()
+                // デバイス削除を先に実行してから、完了後にサインアウト
+                deviceViewModel.calldeleteDevice {
+                    Log.d("SupporterSettingScreen", "Device deletion completed")
+                    userViewModel.signOut()
+                    onSignOut()
+                }
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.outlinedButtonColors(
