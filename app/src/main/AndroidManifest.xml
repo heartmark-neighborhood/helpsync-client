@@ -56,7 +56,7 @@
             </intent-filter>
         </service>
         <service
-            android:name="androidx.work.impl.foreground.SystemForeogroundService"
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="location"
             android:exported="false" />
         <provider
