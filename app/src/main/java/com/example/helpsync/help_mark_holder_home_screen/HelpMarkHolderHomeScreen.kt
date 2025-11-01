@@ -28,6 +28,7 @@ import com.example.helpsync.viewmodel.HelpMarkHolderViewModel
 import com.example.helpsync.viewmodel.UserViewModel
 import com.google.android.gms.location.CurrentLocationRequest
 import com.google.android.gms.location.FusedLocationProviderClient
+import org.json.JSONObject
 
 @SuppressLint("NewApi")
 @Composable
@@ -88,13 +89,15 @@ fun HelpMarkHolderHomeScreen(
     LaunchedEffect(bleRequestUuid) {
         // UUIDがnullでない場合のみAdvertiseを開始
         bleRequestUuid?.let { result ->
-            val uuid = result["proximityVerificationId"]
+            val rawData = result["data"]
+            val data = JSONObject(rawData)
+            val uuid = data.getString("proximityVerificationId")
             if(uuid == null){
                 Log.e("HOLDER_BLE", "UUID is null")
                 return@let
             }
 
-            val expiredAt = result["expiredAt"]
+            val expiredAt = data.getString("expiredAt")
             if(expiredAt == null){
                 Log.e("HOLDER_BLE", "expiredAt is null")
                 return@let
