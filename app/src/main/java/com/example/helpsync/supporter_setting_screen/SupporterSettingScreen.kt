@@ -763,7 +763,7 @@ fun SupporterSettingScreen(
             onClick = {
                 Log.d("SupporterSettingScreen", "Sign out button clicked")
                 // デバイス削除を先に実行してから、完了後にサインアウト
-                deviceViewModel.calldeleteDevice {
+                deviceViewModel.callDeleteDevice {
                     Log.d("SupporterSettingScreen", "Device deletion completed")
                     userViewModel.signOut()
                     onSignOut()

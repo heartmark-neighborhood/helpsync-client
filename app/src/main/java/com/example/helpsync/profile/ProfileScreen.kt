@@ -58,7 +58,7 @@ fun ProfileScreen(
                 
                 // サインアウトボタン
                 IconButton(onClick = {
-                    deviceViewModel.calldeleteDevice()
+                    deviceViewModel.callDeleteDevice()
                     userViewModel.signOut()
                     onSignOut()
                 }) {
@@ -231,7 +231,7 @@ fun ProfileScreen(
 
             Button(
                 onClick = {
-                    deviceViewModel.calldeleteDevice()
+                    deviceViewModel.callDeleteDevice()
                     userViewModel.signOut()
                     onSignOut()
                 },
