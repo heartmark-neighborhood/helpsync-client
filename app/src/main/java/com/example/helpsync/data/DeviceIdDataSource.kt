@@ -15,9 +15,13 @@ class DeviceIdDataSource(private val dataStore: DataStore<Preferences>) {
             preferences[DEVICE_ID_KEY]
         }
 
-    suspend fun saveDeviceId(deviceId: String) {
+    suspend fun saveDeviceId(deviceId: String?) {
         dataStore.edit { preferences ->
-            preferences[DEVICE_ID_KEY] = deviceId
+            if(deviceId != null) {
+                preferences[DEVICE_ID_KEY] = deviceId
+            } else {
+                preferences.remove(DEVICE_ID_KEY)
+            }
         }
     }
 

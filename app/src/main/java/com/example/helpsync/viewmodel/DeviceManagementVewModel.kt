@@ -61,6 +61,7 @@ class DeviceManagementVewModel(
 
     fun calldeleteDevice(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
+            cloudMessageRepository.saveDeviceId(null)
             val deviceId = try {
                 cloudMessageRepository.getDeviceId()
             } catch(e: Exception) {
