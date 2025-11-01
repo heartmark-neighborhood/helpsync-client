@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.helpsync.viewmodel.SupporterViewModel
+import org.json.JSONObject
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -27,7 +28,8 @@ fun RequestAcceptanceScreen(
     onDoneClick: () -> Unit
 ) {
     val helpRequestJson by viewModel.helpRequestJson.collectAsState()
-    val profileData = helpRequestJson
+    val rawData = helpRequestJson?.get("data")
+    val profileData = JSONObject(rawData)
 
     LaunchedEffect(profileData) {
         if (profileData != null) {
@@ -62,7 +64,7 @@ fun RequestAcceptanceScreen(
                         .background(Color.LightGray),
                     contentAlignment = Alignment.Center
                 ) {
-                    val iconUrl = profileData["requesterIconUrl"]
+                    val iconUrl = profileData.getString("requesterIconUrl")
                     if (!iconUrl.isNullOrEmpty()) {
                         AsyncImage(
                             model = iconUrl,
@@ -84,13 +86,13 @@ fun RequestAcceptanceScreen(
                 }
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = profileData["requesterNickname"] ?: "ニックネーム不明",
+                    text = profileData.getString("requesterNickname") ?: "ニックネーム不明",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = profileData["requesterMessage"] ?: "追加情報なし",
+                    text = profileData.getString("requesterMessage") ?: "追加情報なし",
                     fontSize = 16.sp
                 )
             }
