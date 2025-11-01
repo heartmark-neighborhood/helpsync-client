@@ -231,7 +231,7 @@ fun ProfileScreen(
 
             Button(
                 onClick = {
-                    deviceViewModel.calldeleteDevice()
+                    deviceViewModel.callDeleteDevice()
                     userViewModel.signOut()
                     onSignOut()
                 },

@@ -773,7 +773,7 @@ fun HelpMarkHolderProfileScreen(
                     onClick = {
                         Log.d("HelpMarkHolderProfileScreen", "Sign out button clicked")
                         // デバイス削除を先に実行してから、完了後にサインアウト
-                        deviceViewModel.calldeleteDevice {
+                        deviceViewModel.callDeleteDevice {
                             Log.d("HelpMarkHolderProfileScreen", "Device deletion completed")
                             // サインアウト処理
                             userViewModel.signOut()
