@@ -467,7 +467,7 @@ fun SettingsScreen(
             OutlinedButton(
                 onClick = {
                     Log.d("SettingsScreen", "Sign out button clicked")
-                    deviceViewModel.calldeleteDevice()
+                    deviceViewModel.callDeleteDevice()
                     userViewModel.signOut()
                     onSignOut()
                 },
