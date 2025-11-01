@@ -49,14 +49,14 @@
             android:exported="false"
             android:foregroundServiceType="location" />
         <service
-            android:name=".service.HelpRequestMessageingService"
+            android:name=".helprequest_cloudmessage.HelpRequestMessageReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
         <service
-            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:name="androidx.work.impl.foreground.SystemForeogroundService"
             android:foregroundServiceType="location"
             android:exported="false" />
         <provider
