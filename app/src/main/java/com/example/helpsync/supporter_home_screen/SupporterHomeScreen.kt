@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.helpsync.blescanner.BLEScanner
 import com.example.helpsync.viewmodel.SupporterViewModel
+import org.json.JSONObject
 import org.koin.androidx.compose.koinViewModel
 
 @SuppressLint("NewApi")
@@ -56,26 +57,33 @@ fun SupporterHomeScreen(
 
     // --- BLE Scan Start Trigger ---
     LaunchedEffect(bleRequestUuid) {
-        if(bleRequestUuid == null){
-            Log.d("SupporterHome", "No UUID to scan yet.")
-            return@LaunchedEffect
-        }
-        val uuidToScan = bleRequestUuid!!["proximityVerificationId"]
+        bleRequestUuid?.let { result ->
+            val rawData = result["data"]
+            val data = JSONObject(rawData)
+            val uuidToScan = data.getString("proximityVerificationId")
+            if (uuidToScan == null) {
+                Log.e("HOLDER_BLE", "UUID is null")
+                return@let
+            }
 
-        if (!uuidToScan.isNullOrBlank() && uuidToScan != "string") {
-            Log.d("SupporterHome", "🚀 Received scan request for UUID: $uuidToScan")
-            val scanIntent = Intent(context, BLEScanner::class.java).apply {
-                putExtra("UUID", uuidToScan)
+            if (!uuidToScan.isNullOrBlank() && uuidToScan != "string") {
+                Log.d("SupporterHome", "🚀 Received scan request for UUID: $uuidToScan")
+                val scanIntent = Intent(context, BLEScanner::class.java).apply {
+                    putExtra("UUID", uuidToScan)
+                }
+                try {
+                    ContextCompat.startForegroundService(context, scanIntent)
+                    Log.d("SupporterHome", " BLE scan service started.")
+                } catch (e: Exception) {
+                    Log.e("SupporterHome", "Error starting BLE scan service: ${e.message}")
+                    Toast.makeText(context, "スキャン開始エラー", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Log.d(
+                    "SupporterHome",
+                    "No valid UUID to scan yet or scan finished ($uuidToScan). Waiting..."
+                )
             }
-            try {
-                ContextCompat.startForegroundService(context, scanIntent)
-                Log.d("SupporterHome", " BLE scan service started.")
-            } catch (e: Exception) {
-                Log.e("SupporterHome", "Error starting BLE scan service: ${e.message}")
-                Toast.makeText(context, "スキャン開始エラー", Toast.LENGTH_SHORT).show()
-            }
-        } else {
-            Log.d("SupporterHome", "No valid UUID to scan yet or scan finished ($uuidToScan). Waiting...")
         }
     }
 
