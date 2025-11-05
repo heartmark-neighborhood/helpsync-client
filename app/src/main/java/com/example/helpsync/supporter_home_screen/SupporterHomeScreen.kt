@@ -70,6 +70,7 @@ fun SupporterHomeScreen(
                 Log.d("SupporterHome", "🚀 Received scan request for UUID: $uuidToScan")
                 val scanIntent = Intent(context, BLEScanner::class.java).apply {
                     putExtra("UUID", uuidToScan)
+                    putExtra("REQUEST_ID", expectedRequestId ?: "")
                 }
                 try {
                     ContextCompat.startForegroundService(context, scanIntent)
@@ -92,19 +93,28 @@ fun SupporterHomeScreen(
         val bleScanReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 if (intent.action == "com.example.SCAN_RESULT") {
+                    Log.d("SupporterHome", "Received SCAN_RESULT broadcast, intent extras: ${intent.extras}")
+                    
                     val bundle: Bundle? = intent.extras
-                    val found = bundle?.getBoolean("SCAN_SUCCESS") ?: false
-                    val foundRequestId = bundle?.getString("REQUEST_ID")
-                    val expectedRequestId = viewModel.helpRequestId.value
-                    Log.d("SupporterHome", "Received scan result: Success=$found, Found ID=$foundRequestId, Expected ID=$expectedRequestId")
+                    // Use the new key names from BLEScanner
+                    val scanSuccess = bundle?.getBoolean("result") ?: false
+                    val device = bundle?.getString("device")
+                    val rssi = bundle?.getInt("rssi", Int.MIN_VALUE)
+                    val msgUtf8 = bundle?.getString("msgUtf8")
+                    val msgHex = bundle?.getString("msgHex")
+                    
+                    Log.d("SupporterHome", "Received scan result: result=$scanSuccess, device=$device, rssi=$rssi, msgUtf8=$msgUtf8, msgHex=$msgHex")
+                    Log.d("SupporterHome", "Expected helpRequestId=${viewModel.helpRequestId.value}")
 
-                    if (found && !foundRequestId.isNullOrBlank() && foundRequestId == expectedRequestId) {
-                        Log.d("SupporterHome", "✅ Scan successful and ID matches!")
-                        Toast.makeText(context, "ヘルプ要請を発見！", Toast.LENGTH_SHORT).show()
-                        viewModel.callHandleProximityVerificationResult(scanResult = true)
+                    if (scanSuccess) {
+                        Log.d("SupporterHome", "✅ Scan successful! Device found with matching service data")
+                        Toast.makeText(context, "ヘルプ要請を発見！ device=$device rssi=$rssi", Toast.LENGTH_SHORT).show()
+                        // Cloud Function call is handled by BLEScanner; just stop the service
                         context.stopService(Intent(context, BLEScanner::class.java))
                     } else {
-                        Log.w("SupporterHome", "Scan failed, timed out, or ID mismatch.")
+                        Log.w("SupporterHome", "Scan failed or timed out (no matching device found)")
+                        Toast.makeText(context, "ヘルプ要請が見つかりませんでした", Toast.LENGTH_SHORT).show()
+                        // Cloud Function call for failure is handled by BLEScanner
                         context.stopService(Intent(context, BLEScanner::class.java))
                     }
                 }
