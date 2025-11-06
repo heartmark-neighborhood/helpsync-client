@@ -64,14 +64,19 @@ class SupporterViewModel(
                 val uid: String? = FirebaseAuth.getInstance().currentUser?.uid
                 val data = hashMapOf(
                     "verificationResult" to scanResult,
-                    "helpRequestId" to helpRequestId,
+                    "helpRequestId" to helpRequestId.value,
                     "userId" to uid
                 )
+                Log.d("SupporterViewModel", "callHandleProximityVerificationResult: scanResult=$scanResult, helpRequestId=${helpRequestId.value}, userId=$uid")
+                Log.d("SupporterViewModel", "Calling Cloud Function: handleProximityVerificationResult with data=$data")
+                
                 val callResult = functions.getHttpsCallable("handleProximityVerificationResult").call(data).await()
+                
+                Log.d("SupporterViewModel", "Cloud Function call successful: result=${callResult.data}")
             } catch(e: Exception){
-                Log.d("Error", "failed to call notifyProximityVerificationResult")
+                Log.e("SupporterViewModel", "Failed to call handleProximityVerificationResult", e)
+                Log.e("SupporterViewModel", "Error message: ${e.message}")
             }
-
         }
     }
 
