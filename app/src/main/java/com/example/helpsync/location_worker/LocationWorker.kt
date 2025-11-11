@@ -74,8 +74,8 @@ class LocationWorker(
                 // setForegroundAsync はワーカーをフォアグラウンドに昇格させる
                 setForegroundAsync(foregroundInfo)
 
+                val cts = CancellationTokenSource()
                 try {
-                    val cts = CancellationTokenSource()
                     Log.d("LocationWorker", "fetchAndSendLocation: calling getCurrentLocation()")
                     location = fusedLocationClient
                         .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cts.token)
@@ -83,6 +83,8 @@ class LocationWorker(
                     Log.d("LocationWorker", "getCurrentLocation returned: ${location}")
                 } catch (e: Exception) {
                     Log.e("LocationWorker", "fetchAndSendLocation: getCurrentLocation failed", e)
+                } finally {
+                    cts.cancel()
                 }
 
                 if (location == null) {
