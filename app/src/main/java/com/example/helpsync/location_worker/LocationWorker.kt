@@ -28,6 +28,7 @@ class LocationWorker(
 
     companion object {
         const val WORK_NAME = "periodicLocationUpload"
+        private const val LOCATION_NOTIFICATION_ID = 42
     }
 
     override suspend fun doWork(): Result {
@@ -70,7 +71,7 @@ class LocationWorker(
                     .setPriority(NotificationCompat.PRIORITY_LOW)
                     .build()
 
-                val foregroundInfo = ForegroundInfo(42, notification)
+                val foregroundInfo = ForegroundInfo(LOCATION_NOTIFICATION_ID, notification)
                 // setForegroundAsync はワーカーをフォアグラウンドに昇格させる
                 setForegroundAsync(foregroundInfo)
 
