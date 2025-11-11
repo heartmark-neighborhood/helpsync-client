@@ -596,6 +596,11 @@ fun HelpMarkHolderProfileScreen(
                         ExistingPeriodicWorkPolicy.UPDATE, // 既存のタスクがあれば何もしない
                         periodicWorkRequest
                     )
+                    val oneTime = androidx.work.OneTimeWorkRequestBuilder<LocationWorker>()
+                        .setConstraints(constraints)
+                        .build()
+                    workManager.enqueue(oneTime)
+                    Log.d("HelpMarkHolderProfileScreen", "Enqueued one-time LocationWorker to run immediately for priming.")
                     Log.d(
                         "HelpMarkHolderProfileScreen",
                         "WorkManager task (${LocationWorker.WORK_NAME}) enqueued with policy UPDATE."

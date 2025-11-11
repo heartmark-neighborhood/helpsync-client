@@ -540,6 +540,12 @@ fun SupporterSettingScreen(
                     periodicWorkRequest
                 )
                 Log.d("SupporterSettingScreen", "WorkManagerのタスク (${LocationWorker.WORK_NAME}) をキューに追加しました。")
+
+                val oneTime = androidx.work.OneTimeWorkRequestBuilder<LocationWorker>()
+                    .setConstraints(constraints)
+                    .build()
+                workManager.enqueue(oneTime)
+                Log.d("SupporterSettingScreen", "Enqueued one-time LocationWorker to run immediately for priming.")
             } else {
                 Log.d("SupporterSettingScreen", "バックグラウンドでの位置情報が無効になりました。WorkManagerのタスクをキャンセルします。")
                 workManager.cancelUniqueWork(LocationWorker.WORK_NAME)
