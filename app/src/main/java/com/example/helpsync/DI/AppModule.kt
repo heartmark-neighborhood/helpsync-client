@@ -35,7 +35,7 @@ val appModule = module {
     single { DeviceIdDataSource(get(DEVICE_ID)) }
     single { HelpRequestIdDataSource(get(HELP_REQUEST_ID))}
 
-    single<CloudMessageRepository> { CloudMessageRepositoryImpl(get()) }
+    single<CloudMessageRepository> { CloudMessageRepositoryImpl(get(), get()) }
 
 
     factory {
