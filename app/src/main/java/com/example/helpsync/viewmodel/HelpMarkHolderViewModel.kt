@@ -36,7 +36,6 @@ class HelpMarkHolderViewModel(
                 }
         }
     }
-    var helpRequestId = mutableStateOf("")
 
     fun handleFCMData(data: Map<String, String>)
     {
@@ -74,12 +73,11 @@ class HelpMarkHolderViewModel(
                 val responseData = callResult.data as? Map<String, Any>
                 val status = responseData?.get("status") as? String
                 val helpRequestIdResult = responseData?.get("helpRequestId") as? String
-                if(status != null) helpRequestId.value = "$helpRequestIdResult"
+                if(status != null) cloudMessageRepository.saveHelpRequestId(helpRequestIdResult)
 
             } catch(e: Exception){
                 Log.d("Error", "createHelpRequestの呼びだしに失敗しました")
                 Log.d("Error", "エラーメッセージ ${e.message}")
-                helpRequestId.value =  "Error ${e.message}"
             }
         }
     }
@@ -126,6 +124,12 @@ class HelpMarkHolderViewModel(
     }
     fun callCompleteHelp(rating: Int, comment: String?) {
         viewModelScope.launch {
+            val helpRequestId = try {
+                cloudMessageRepository.getHelpRequestId()
+            } catch (e: Exception){
+                Log.d("Error", "HelpRequestIdの取得に失敗しました")
+                Log.d("Error", "Error Message:${e.message}")
+            }
             try {
                 val functions = Firebase.functions("asis-northeast2")
                 val evaluationMap = hashMapOf(
@@ -133,7 +137,7 @@ class HelpMarkHolderViewModel(
                     "comment" to comment
                 )
                 val data = hashMapOf(
-                    "helpRequestId" to helpRequestId.value,
+                    "helpRequestId" to helpRequestId,
                     "evaluation" to evaluationMap
                 )
                 val callResult = functions.getHttpsCallable("completeHelp").call(data).await()

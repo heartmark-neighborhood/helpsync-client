@@ -20,7 +20,6 @@ import org.json.JSONObject
 class SupporterViewModel(
     private val cloudMessageRepository: CloudMessageRepository
 ): ViewModel() {
-    var helpRequestId: MutableState<String?> = mutableStateOf("")
 
     private val _requesterProfile: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
     val requesterProfile: StateFlow<Map<String, String>?> = _requesterProfile
@@ -53,7 +52,15 @@ class SupporterViewModel(
                 _bleRequestUuid.value = data
                 val rawData = data["data"]
                 val json = JSONObject(rawData)
-                helpRequestId.value = json.getString("helpRequestId")
+                viewModelScope.launch {
+                    try {
+                        cloudMessageRepository.saveHelpRequestId(json.getString("helpRequestId"))
+                    } catch(e: Exception) {
+                        Log.d("Error", "HelpRequestIdの保存に失敗しました")
+                        Log.d("Error", "Error Message: ${e.message}")
+                    }
+                }
+
             }
             "help-request" -> {
                 _helpRequestJson.value = data
@@ -62,15 +69,21 @@ class SupporterViewModel(
     }
     fun callHandleProximityVerificationResult(scanResult: Boolean) {
         viewModelScope.launch {
+            val helpRequestId = try {
+                cloudMessageRepository.getHelpRequestId()
+            } catch (e: Exception){
+                Log.d("Error", "HelpRequestIdの取得に失敗しました")
+                Log.d("Error", "Error Message:${e.message}")
+            }
             try {
                 val functions = Firebase.functions("asia-northeast2")
                 val uid: String? = FirebaseAuth.getInstance().currentUser?.uid
                 val data = hashMapOf(
                     "verificationResult" to scanResult,
-                    "helpRequestId" to helpRequestId.value,
+                    "helpRequestId" to helpRequestId,
                     "userId" to uid
                 )
-                Log.d("SupporterViewModel", "callHandleProximityVerificationResult: scanResult=$scanResult, helpRequestId=${helpRequestId.value}, userId=$uid")
+                Log.d("SupporterViewModel", "callHandleProximityVerificationResult: scanResult=$scanResult, helpRequestId=${helpRequestId}, userId=$uid")
                 Log.d("SupporterViewModel", "Calling Cloud Function: handleProximityVerificationResult with data=$data")
                 
                 val callResult = functions.getHttpsCallable("handleProximityVerificationResult").call(data).await()
@@ -85,12 +98,18 @@ class SupporterViewModel(
 
     fun callRespondToHelpRequest(request_response: Boolean) {
         viewModelScope.launch {
+            val helpRequestId = try {
+                cloudMessageRepository.getHelpRequestId()
+            } catch (e: Exception){
+                Log.d("Error", "HelpRequestIdの取得に失敗しました")
+                Log.d("Error", "Error Message:${e.message}")
+            }
             try {
                 val functions = Firebase.functions("asia-northeast2")
                 val response = if(request_response) "accept"
                 else "decline"
                 val data = hashMapOf(
-                    "helpRequestId" to helpRequestId.value,
+                    "helpRequestId" to helpRequestId,
                     "response" to response
                 )
                 val callResult = functions.getHttpsCallable("respondToHelpRequest").call(data).await()
@@ -135,7 +154,13 @@ class SupporterViewModel(
         _helpRequestJson.value = null
         _requesterProfile.value = null
         _bleRequestUuid.value = null
-         helpRequestId.value = null
+        viewModelScope.launch {
+            try {
+                cloudMessageRepository.saveHelpRequestId(null)
+            } catch(e: Exception) {
+                Log.d("Error", "helpRequesIdの初期化に失敗しました")
+            }
+        }
         Log.d("SupporterViewModel", "Cleared viewed request data.")
     }
 }
