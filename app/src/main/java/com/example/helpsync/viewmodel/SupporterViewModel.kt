@@ -158,9 +158,22 @@ class SupporterViewModel(
             try {
                 cloudMessageRepository.saveHelpRequestId(null)
             } catch(e: Exception) {
-                Log.d("Error", "helpRequesIdの初期化に失敗しました")
+                Log.d("Error", "helpRequestIdの初期化に失敗しました")
             }
         }
         Log.d("SupporterViewModel", "Cleared viewed request data.")
+    }
+
+    fun getHelpRequestId(): String? {
+        var helpRequestId: String? = null
+        viewModelScope.launch {
+            helpRequestId = try {
+                cloudMessageRepository.getHelpRequestId()
+            } catch (e: Exception) {
+                Log.d("Error", "helpRequestIdの取得に失敗しました")
+                null
+            }
+        }
+        return helpRequestId
     }
 }
