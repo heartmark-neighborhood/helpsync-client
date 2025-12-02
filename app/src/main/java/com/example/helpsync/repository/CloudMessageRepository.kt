@@ -2,6 +2,7 @@ package com.example.helpsync.repository
 
 import android.util.Log
 import com.example.helpsync.data.DeviceIdDataSource
+import com.example.helpsync.data.HelpRequestIdDataSource
 import com.google.firebase.functions.ktx.functions
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.channels.BufferOverflow
@@ -16,11 +17,15 @@ interface CloudMessageRepository {
     fun postCloudMessage(data: Map<String, String>)
     suspend fun getDeviceId() : String?
     suspend fun saveDeviceId(deviceID: String?)
+
+    suspend fun getHelpRequestId() : String?
+    suspend fun saveHelpRequestId(helpRequestId: String?)
     suspend fun callRenewDeviceToken(token: String)
 }
 
 class CloudMessageRepositoryImpl (
-    private val deviceIdDataSource: DeviceIdDataSource
+    private val deviceIdDataSource: DeviceIdDataSource,
+    private val helpRequestIdDataSource: HelpRequestIdDataSource
 ): CloudMessageRepository {
 
     private val _bleRequestMessageFlow = MutableSharedFlow<Map<String, String>>(
@@ -71,5 +76,13 @@ class CloudMessageRepositoryImpl (
 
     override suspend fun saveDeviceId(deviceId: String?) {
         deviceIdDataSource.saveDeviceId(deviceId)
+    }
+
+    override suspend fun getHelpRequestId(): String? {
+        return helpRequestIdDataSource.getHelpRequestId()
+    }
+
+    override suspend fun saveHelpRequestId(helpRequestId: String?) {
+        helpRequestIdDataSource.saveHelpRequestId(helpRequestId)
     }
 }
