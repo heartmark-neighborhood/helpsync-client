@@ -3,6 +3,7 @@ package com.example.helpsync.repository
 import android.util.Log
 import com.example.helpsync.data.DeviceIdDataSource
 import com.example.helpsync.data.HelpRequestIdDataSource
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.functions.ktx.functions
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.channels.BufferOverflow
@@ -21,6 +22,7 @@ interface CloudMessageRepository {
     suspend fun getHelpRequestId() : String?
     suspend fun saveHelpRequestId(helpRequestId: String?)
     suspend fun callRenewDeviceToken(token: String)
+    suspend fun callHandleProximityVerificationResultBackGround(scanResult: Boolean)
 }
 
 class CloudMessageRepositoryImpl (
@@ -68,6 +70,30 @@ class CloudMessageRepositoryImpl (
         )
 
         val callResult = functions.getHttpsCallable("RenewDeviceToken").call(data).await()
+    }
+
+    override suspend fun callHandleProximityVerificationResultBackGround(scanResult: Boolean) {
+        val helpRequestId = try {
+            getHelpRequestId()
+        } catch (e:Exception) {
+            Log.d("Error", "HelpRequestIdの取得に失敗しました")
+            Log.d("Error", "Error Message:${e.message}")
+        }
+        try {
+            val functions = Firebase.functions("asia-northeast2")
+            val uid: String? = FirebaseAuth.getInstance().currentUser?.uid
+            val data = hashMapOf(
+                "verificationResult" to scanResult,
+                "helpRequesId" to helpRequestId,
+                "userId" to uid
+            )
+
+            Log.d("Supporter", "call HandleProximityVerificationResult in background")
+            val callResult = functions.getHttpsCallable("handleProximityVerificationResult").call(data).await()
+        } catch(e: Exception) {
+            Log.d("Error", "handleProximityVerificationResultの実行に失敗しました")
+            Log.d("Error", "Error message: ${e.message}")
+        }
     }
 
     override suspend fun getDeviceId(): String? {
