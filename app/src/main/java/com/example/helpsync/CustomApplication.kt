@@ -1,6 +1,9 @@
 package com.example.helpsync
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import android.util.Log
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
@@ -34,6 +37,15 @@ class CustomApplication : Application() {
                     PlayIntegrityAppCheckProviderFactory.getInstance()
                 )
             }
+
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(
+                    "WORK_CHANNEL_ID",
+                    "Background Sync",
+                    NotificationManager.IMPORTANCE_LOW
+                )
+                getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+            }
     
             startKoin {
                 androidLogger()
@@ -42,4 +54,5 @@ class CustomApplication : Application() {
                 workManagerFactory()
             }
         }
+
 }
