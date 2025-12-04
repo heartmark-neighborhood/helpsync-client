@@ -33,7 +33,6 @@ fun SupporterHomeScreen(
 ) {
     val context = LocalContext.current
     val bleRequestUuid by viewModel.bleRequestUuid.collectAsState()
-    val expectedRequestId by viewModel.helpRequestId
 
     // --- Permissions ---
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -70,7 +69,7 @@ fun SupporterHomeScreen(
                 Log.d("SupporterHome", "🚀 Received scan request for UUID: $uuidToScan")
                 val scanIntent = Intent(context, BLEScanner::class.java).apply {
                     putExtra("UUID", uuidToScan)
-                    putExtra("REQUEST_ID", expectedRequestId ?: "")
+                    putExtra("REQUEST_ID", viewModel.getHelpRequestId() ?: "")
                 }
                 try {
                     ContextCompat.startForegroundService(context, scanIntent)
@@ -104,7 +103,7 @@ fun SupporterHomeScreen(
                     val msgHex = bundle?.getString("msgHex")
                     
                     Log.d("SupporterHome", "Received scan result: result=$scanSuccess, device=$device, rssi=$rssi, msgUtf8=$msgUtf8, msgHex=$msgHex")
-                    Log.d("SupporterHome", "Expected helpRequestId=${viewModel.helpRequestId.value}")
+                    Log.d("SupporterHome", "Expected helpRequestId=${viewModel.getHelpRequestId()}")
 
                     if (scanSuccess) {
                         Log.d("SupporterHome", "✅ Scan successful! Device found with matching service data")
@@ -141,7 +140,7 @@ fun SupporterHomeScreen(
     LaunchedEffect(helpRequestJson) {
         helpRequestJson?.let {
             Log.d("SupporterHome", "Received help request details, navigating...")
-            onNavigateToAcceptance(expectedRequestId ?: "")
+            onNavigateToAcceptance(viewModel.getHelpRequestId() ?: "")
             viewModel.clearViewedRequest()
         }
     }

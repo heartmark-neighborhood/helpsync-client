@@ -2,22 +2,26 @@ package com.example.helpsync.viewmodel
 
 import android.net.Uri
 import android.util.Log
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.helpsync.data.HelpRequest
 import com.example.helpsync.data.User
+import com.example.helpsync.repository.CloudMessageRepository
 import com.example.helpsync.repository.UserRepository
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.util.Date
 
-class UserViewModel : ViewModel() {
+class UserViewModel(
+    private val cloudMessageRepository: CloudMessageRepository
+) : ViewModel() {
     private val userRepository = UserRepository()
 
     companion object {
@@ -39,7 +43,6 @@ class UserViewModel : ViewModel() {
     var isSignedIn by mutableStateOf(false)
         private set
 
-    // ▼▼▼ ここから下の3つを新規追加 ▼▼▼
     private val _activeHelpRequest = MutableStateFlow<HelpRequest?>(null)
     val activeHelpRequest = _activeHelpRequest.asStateFlow()
 
@@ -65,14 +68,13 @@ class UserViewModel : ViewModel() {
 
     // Firestoreのリスナーを保持するための変数
     private var requestListener: ListenerRegistration? = null
-    // ▲▲▲ ここまで新規追加 ▲▲▲
 
     init {
         Log.d(TAG, "=== UserViewModel Init ===")
-        
+
         // ログイン状態を保持するため、自動サインアウトを完全に削除
         Log.d(TAG, "Preserving auth state on app startup")
-        
+
         // 現在の認証状態をチェック
         val currentFirebaseUser = userRepository.getCurrentUser()
         if (currentFirebaseUser != null) {
@@ -151,6 +153,16 @@ class UserViewModel : ViewModel() {
             userRepository.signIn(email, password)
                 .onSuccess { firebaseUser ->
                     Log.d(TAG, "✅ SignIn successful for user: ${firebaseUser.uid}")
+
+                    // 【修正点】サインイン時にDeviceId(FCM Token)を確実に保存する
+                    try {
+                        val token = FirebaseMessaging.getInstance().token.await()
+                        cloudMessageRepository.saveDeviceId(token)
+                        Log.d(TAG, "Device ID saved successfully: $token")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to save Device ID", e)
+                    }
+
                     isSignedIn = true
                     loadUserData(firebaseUser.uid)
                 }
@@ -162,13 +174,31 @@ class UserViewModel : ViewModel() {
                 }
         }
     }
-
     fun signOut() {
         Log.d(TAG, "SignOut requested")
-        userRepository.signOut()
-        isSignedIn = false
-        currentUser = null
-        Log.d(TAG, "✅ SignOut completed")
+        viewModelScope.launch {
+            try {
+                // 【修正点】サインアウト前にサーバーからデバイス情報を削除する
+                cloudMessageRepository.deleteDevice()
+                Log.d(TAG, "Device deleted from server")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to delete device", e)
+            } finally {
+                // 失敗してもローカルのサインアウトは実行する
+                userRepository.signOut()
+                // 【修正点】ローカルのDeviceIdもクリアする
+                try {
+                    cloudMessageRepository.saveDeviceId(null)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to clear local device id", e)
+                }
+
+                isSignedIn = false
+                currentUser = null
+                _activeHelpRequest.value = null
+                Log.d(TAG, "✅ SignOut completed")
+            }
+        }
     }
 
     private fun loadUserData(uid: String) {
@@ -456,13 +486,15 @@ class UserViewModel : ViewModel() {
         viewModelScope.launch {
             val user = currentUser ?: return@launch
             val uid = userRepository.getCurrentUserId() ?: return@launch
+
+            // 【修正点】念のため呼び出し前にもDeviceIdチェックを入れることが望ましいが、SignInでの修正で対応済みと想定
+
             isLoading = true
             errorMessage = null
 
             userRepository.createHelpRequest(uid, user.nickname)
                 .onSuccess { newRequest ->
                     _activeHelpRequest.value = newRequest
-                    // リアルタイムでリクエストの更新を監視開始
                     listenForRequestUpdates(newRequest.id)
                 }
                 .onFailure { error ->

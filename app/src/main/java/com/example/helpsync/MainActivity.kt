@@ -107,7 +107,7 @@ class MainActivity : ComponentActivity() {
             Log.e(TAG, "❌ Firebase initialization failed: ${e.message}", e)
         }
 
-        bleReceiver = BLEScanReceiver(::onScanResult)
+        bleReceiver = BLEScanReceiver()
         registerReceiver(
             bleReceiver,
             IntentFilter("com.example.SCAN_RESULT"),
