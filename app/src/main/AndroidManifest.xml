@@ -70,6 +70,13 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
+        <receiver
+            android:name=".blescanner.BLEScanReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.SCAN_RESULT" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
