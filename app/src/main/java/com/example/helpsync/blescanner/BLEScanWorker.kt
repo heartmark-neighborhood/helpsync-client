@@ -111,7 +111,7 @@ class BLEScanWorker (
             .setServiceUuid(serviceUuid)
             .build()
         try {
-            if(ActivityCompat.checkSelfPermission(applicationContext, android.Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            if(ActivityCompat.checkSelfPermission(applicationContext, android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
                 scanner?.startScan(listOf(filter), settings, scanCallback)
                 Log.d("BLEScanWorker", "BLEScanを開始しました")
             }
