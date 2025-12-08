@@ -84,7 +84,7 @@ class CloudMessageRepositoryImpl (
             val uid: String? = FirebaseAuth.getInstance().currentUser?.uid
             val data = hashMapOf(
                 "verificationResult" to scanResult,
-                "helpRequesId" to helpRequestId,
+                "helpRequestId" to helpRequestId,
                 "userId" to uid
             )
 
