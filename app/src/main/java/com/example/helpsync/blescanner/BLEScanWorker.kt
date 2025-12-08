@@ -38,7 +38,7 @@ class BLEScanWorker (
         val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothManager.adapter
     }
-    val uuidString = inputData.getString("SCAN_RESULT_DATA")
+    val uuidString = inputData.getString("SCAN_UUID")
     val serviceUuid = ParcelUuid(UUID.fromString(uuidString))
     val context = this;
     var isDeviceFound = false
