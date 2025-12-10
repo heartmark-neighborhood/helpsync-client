@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.helpsync.blescanner.BLEScanWorker
 import com.example.helpsync.data.DeviceIdDataSource
 import com.example.helpsync.data.HelpRequestIdDataSource
 import com.example.helpsync.location_worker.LocationWorker
@@ -66,5 +67,9 @@ val appModule = module {
 
     worker {
         CallCloudFunctionWorker(get(), get(), get())
+    }
+
+    worker {
+        BLEScanWorker(get(), get(), get())
     }
 }
