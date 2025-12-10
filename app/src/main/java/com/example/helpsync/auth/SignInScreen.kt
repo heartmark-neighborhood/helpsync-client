@@ -34,18 +34,9 @@ fun SignInScreen(
         isFormValid = email.isNotBlank() && password.isNotBlank()
     }
 
-    // サインイン成功時の処理: デバイス登録を呼び出す
+    // サインイン成功時の処理
     LaunchedEffect(userViewModel.isSignedIn) {
         if (userViewModel.isSignedIn) {
-            // 既にデバイスが登録されているかチェック
-            val isRegistered = deviceViewModel.isDeviceRegistered()
-            if (!isRegistered) {
-                Log.d("SignInScreen", "新しいデバイスを登録します")
-                // 最初はプレースホルダ緯度経度で登録（後で位置情報更新処理が上書きします）
-                deviceViewModel.callRegisterNewDevice(0.0, 0.0)
-            } else {
-                Log.d("SignInScreen", "デバイスは既に登録済みです")
-            }
             onSignInSuccess()
         }
     }

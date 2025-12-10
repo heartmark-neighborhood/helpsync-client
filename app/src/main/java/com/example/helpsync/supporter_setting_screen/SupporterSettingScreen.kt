@@ -66,6 +66,8 @@ fun SupporterSettingScreen(
     // 初期状態の写真URIを保持（変更検出用）
     val initialPhotoUri by remember(photoUri) { mutableStateOf(photoUri) }
     var notificationsEnabled by remember { mutableStateOf(true) }
+    // サインアウト処理中かどうかを管理
+    var isSigningOut by remember { mutableStateOf(false) }
     
     // UserViewModelから現在のユーザー情報を取得
     val currentUser = userViewModel.currentUser
@@ -767,14 +769,24 @@ fun SupporterSettingScreen(
         Spacer(modifier = Modifier.height(32.dp))
         OutlinedButton(
             onClick = {
+                if (isSigningOut) {
+                    Log.d("SupporterSettingScreen", "Sign out already in progress, ignoring click")
+                    return@OutlinedButton
+                }
+                
                 Log.d("SupporterSettingScreen", "Sign out button clicked")
+                isSigningOut = true
+                
                 // デバイス削除を先に実行してから、完了後にサインアウト
                 deviceViewModel.callDeleteDevice {
                     Log.d("SupporterSettingScreen", "Device deletion completed")
                     userViewModel.signOut()
                     onSignOut()
+                    // 処理完了後にフラグをリセット（念のため）
+                    isSigningOut = false
                 }
             },
+            enabled = !isSigningOut,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = Color(0xFFD32F2F)
@@ -782,11 +794,25 @@ fun SupporterSettingScreen(
             border = BorderStroke(1.dp, Color(0xFFD32F2F)),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text(
-                text = "サインアウト",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
+            if (isSigningOut) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = Color(0xFFD32F2F),
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "サインアウト中...",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            } else {
+                Text(
+                    text = "サインアウト",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }
