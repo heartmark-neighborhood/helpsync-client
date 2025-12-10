@@ -99,6 +99,7 @@ class BLEScanWorker (
     }
 
     override suspend fun doWork(): Result {
+        Log.d("BLEScanner", "doWorkが実行されました")
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
             .build()
@@ -106,8 +107,9 @@ class BLEScanWorker (
             .setServiceUuid(serviceUuid)
             .build()
         try {
-            if(ActivityCompat.checkSelfPermission(applicationContext, android.Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            if(ActivityCompat.checkSelfPermission(applicationContext, android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
                 scanner?.startScan(listOf(filter), settings, scanCallback)
+                Log.d("BLEScanWorker", "BLEScanを開始しました")
             }
             delay(45_000L)
             scanner?.stopScan(scanCallback)
@@ -117,6 +119,8 @@ class BLEScanWorker (
             )
             Result.success(outputData)
         } catch (e: Exception) {
+            Log.d("Error", "BLE Scanに失敗しました")
+            Log.d("Error", "${e.message}")
             Result.failure()
         }
         return Result.failure()
