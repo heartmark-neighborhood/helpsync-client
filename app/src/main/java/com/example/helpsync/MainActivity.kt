@@ -130,6 +130,7 @@ class MainActivity : ComponentActivity() {
             HelpSyncTheme {
                 val navController = rememberNavController()
                 val userViewModel: UserViewModel = koinViewModel()
+                val deviceViewModel: com.example.helpsync.viewmodel.DeviceManagementVewModel = koinViewModel()
                 val helpMarkHolderViewModel: HelpMarkHolderViewModel = koinViewModel()
                 val bleAdvertiser: BLEAdvertiser = remember {
                     BLEAdvertiser(this, "0000180A-0000-1000-8000-00805F9B34FB")
@@ -191,6 +192,15 @@ class MainActivity : ComponentActivity() {
                     Log.d(TAG, "LaunchedEffect triggered - isSignedIn: $isSignedIn, currentUser: ${currentUser?.email}, role: ${currentUser?.role}, nickname: ${currentUser?.nickname}")
                     
                     if (isSignedIn && currentUser != null) {
+                        // デバイス登録処理（MainActivity内なので画面遷移してもキャンセルされない）
+                        val isRegistered = deviceViewModel.isDeviceRegistered()
+                        if (!isRegistered) {
+                            Log.d(TAG, "📱 Registering new device for user: ${currentUser?.email}")
+                            deviceViewModel.callRegisterNewDevice(0.0, 0.0)
+                        } else {
+                            Log.d(TAG, "📱 Device already registered")
+                        }
+                        
                         // 既に起動時の自動ナビゲーションが完了している場合はスキップ
                         if (hasNavigatedOnStartup) {
                             Log.d(TAG, "⏭️ Skipping navigation (already navigated on startup)")

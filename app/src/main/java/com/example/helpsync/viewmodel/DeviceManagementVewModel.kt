@@ -18,10 +18,34 @@ class DeviceManagementVewModel(
     fun callRegisterNewDevice(latitude: Double, longitude: Double) {
         viewModelScope.launch {
             try {
+                // 既にデバイスが登録されているかチェック
+                val existingDeviceId = try {
+                    cloudMessageRepository.getDeviceId()
+                } catch (e: Exception) {
+                    null
+                }
+                
+                if (existingDeviceId != null) {
+                    Log.d("DeviceManagement", "デバイスは既に登録されています: $existingDeviceId")
+                    return@launch
+                }
+                
                 val functions = Firebase.functions("asia-northeast2")
                 val owner = FirebaseAuth.getInstance().currentUser
                 val ownerId = owner?.uid
+                
+                if (ownerId == null) {
+                    Log.e("DeviceManagement", "ユーザーが認証されていません")
+                    return@launch
+                }
+                
                 val deviceToken = FirebaseMessaging.getInstance().token.await()
+                
+                if (deviceToken.isNullOrEmpty()) {
+                    Log.e("DeviceManagement", "デバイストークンの取得に失敗しました")
+                    return@launch
+                }
+                
                 val locationMap = hashMapOf(
                     "latitude" to latitude,
                     "longitude" to longitude
@@ -32,6 +56,7 @@ class DeviceManagementVewModel(
                     "location" to locationMap
                 )
 
+                Log.d("DeviceManagement", "デバイス登録リクエスト: ownerId=$ownerId, token=${deviceToken.take(10)}...")
                 val callResult = functions.getHttpsCallable("registerNewDevice").call(data).await()
 
                 val responseData = callResult.data as? Map<String, Any>
@@ -39,12 +64,13 @@ class DeviceManagementVewModel(
 
                 if (deviceId != null) {
                     cloudMessageRepository.saveDeviceId(deviceId)
-                    Log.d("DeviceManagement", "デバイスIDを保存しました: $deviceId")
+                    Log.d("DeviceManagement", "✅ デバイスIDを保存しました: $deviceId")
                 } else {
-                    Log.e("DeviceManagement", "deviceIdがnullです")
+                    Log.e("DeviceManagement", "❌ レスポンスにdeviceIdが含まれていません")
                 }
             } catch (e: Exception) {
-                Log.e("DeviceManagement", "デバイスの登録に失敗しました", e)
+                Log.e("DeviceManagement", "❌ デバイスの登録に失敗しました", e)
+                Log.e("DeviceManagement", "Error details: ${e.message}")
             }
         }
     }
@@ -60,28 +86,59 @@ class DeviceManagementVewModel(
     }
 
     fun callDeleteDevice(onComplete: () -> Unit = {}) {
+        Log.d("DeviceManagement", "=== callDeleteDevice called ===")
         viewModelScope.launch {
-            cloudMessageRepository.saveDeviceId(null)
+            Log.d("DeviceManagement", "viewModelScope.launch started")
+            // 先にdeviceIdを取得してから削除する
             val deviceId = try {
                 cloudMessageRepository.getDeviceId()
             } catch(e: Exception) {
-                Log.d("Error", "deviceIdの取得に失敗しました")
+                Log.e("DeviceManagement", "deviceIdの取得に失敗しました", e)
                 null
             }
+            
+            Log.d("DeviceManagement", "Retrieved deviceId: $deviceId")
+            
+            if (deviceId == null) {
+                Log.w("DeviceManagement", "削除するdeviceIdが見つかりません")
+                onComplete()
+                return@launch
+            }
+            
             try{
+                Log.d("DeviceManagement", "Calling Firebase Functions deleteDevice with deviceId: $deviceId")
                 val functions = Firebase.functions("asia-northeast2")
                 val data = hashMapOf(
                     "deviceId" to deviceId
                 )
 
+                Log.d("DeviceManagement", "Awaiting Cloud Functions response...")
                 val callResult = functions.getHttpsCallable("deleteDevice").call(data).await()
-                Log.d("DeviceManagement", "デバイスの削除に成功しました")
+                Log.d("DeviceManagement", "✅ Cloud Functions側でデバイスを削除しました")
+                Log.d("DeviceManagement", "Response: ${callResult.data}")
             } catch(e: Exception) {
-                Log.d("Error", "デバイスの削除に失敗しました")
-                Log.d("Error", "Error message: ${e.message}")
+                Log.e("DeviceManagement", "Exception caught in callDeleteDevice", e)
+                // デバイスが見つからない場合は既に削除されているので、ワーニングログのみ
+                if (e.message?.contains("not found", ignoreCase = true) == true) {
+                    Log.w("DeviceManagement", "⚠️ デバイスは既にサーバー側で削除されています: $deviceId")
+                } else {
+                    Log.e("DeviceManagement", "❌ デバイスの削除に失敗しました", e)
+                    Log.e("DeviceManagement", "Error message: ${e.message}")
+                }
             } finally {
+                Log.d("DeviceManagement", "Entering finally block")
+                // エラーの有無に関わらず、ローカルのdeviceIdは削除する
+                try {
+                    cloudMessageRepository.saveDeviceId(null)
+                    Log.d("DeviceManagement", "✅ ローカルのdeviceIdを削除しました")
+                } catch (e: Exception) {
+                    Log.e("DeviceManagement", "❌ ローカルのdeviceId削除に失敗", e)
+                }
+                
+                Log.d("DeviceManagement", "Calling onComplete callback")
                 // 成功・失敗に関わらずコールバックを実行
                 onComplete()
+                Log.d("DeviceManagement", "=== callDeleteDevice completed ===")
             }
         }
     }

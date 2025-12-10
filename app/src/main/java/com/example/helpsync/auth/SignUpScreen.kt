@@ -36,10 +36,9 @@ fun SignUpScreen(
                      password == confirmPassword
     }
 
-    // サインアップ成功時の処理: デバイス登録を呼び出す
+    // サインアップ成功時の処理
     LaunchedEffect(userViewModel.isSignedIn) {
         if (userViewModel.isSignedIn) {
-            deviceViewModel.callRegisterNewDevice(0.0, 0.0)
             onSignUpSuccess()
         }
     }
