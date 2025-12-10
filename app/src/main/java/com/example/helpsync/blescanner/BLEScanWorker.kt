@@ -42,6 +42,7 @@ class BLEScanWorker (
     val serviceUuid = ParcelUuid(UUID.fromString(uuidString))
     val context = this;
     var isDeviceFound = false
+    private val scanResults = mutableListOf<ScanResult>()
 
     val scanner = bluetoothAdapter?.bluetoothLeScanner
     private val scanCallback = object : ScanCallback() {
@@ -74,14 +75,9 @@ class BLEScanWorker (
                     ExistingWorkPolicy.KEEP,
                     uploadRequest
                 )
-                // Log all scan results for debugging
-
 
                 // MATCH FOUND! Send success broadcast and stop scanning
                 Log.d("debug", "onScanResult: MATCH FOUND! callbackType=$callbackType device=$address rssi=$rssi msgUtf8=$msgUtf8 msgHex=$msgHex")
-
-                // Stop scanning immediately after finding target
-
             } catch (ex: Exception) {
                 Log.e("BLEScanError", "onScanResult: failed to process scan result", ex)
             }
@@ -114,11 +110,16 @@ class BLEScanWorker (
                 scanner?.startScan(listOf(filter), settings, scanCallback)
             }
             delay(45_000L)
-            Result.success()
+            scanner?.stopScan(scanCallback)
+
+            val outputData = workDataOf(
+                "IS_FOUND" to true
+            )
+            Result.success(outputData)
         } catch (e: Exception) {
             Result.failure()
         }
-        return Result.success()
+        return Result.failure()
     }
 
 }
