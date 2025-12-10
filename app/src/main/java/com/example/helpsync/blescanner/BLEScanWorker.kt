@@ -13,17 +13,20 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.ParcelUuid
 import android.util.Log
+import androidx.compose.runtime.mutableStateOf
 import androidx.core.app.ActivityCompat
 import androidx.core.content.PermissionChecker
 import androidx.core.content.PermissionChecker.checkSelfPermission
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.example.helpsync.repository.CloudMessageRepository
 import com.example.helpsync.worker.CallCloudFunctionWorker
 import com.google.android.gms.common.wrappers.Wrappers.packageManager
 import kotlinx.coroutines.delay
@@ -32,7 +35,8 @@ import java.util.UUID
 
 class BLEScanWorker (
     context: Context,
-    workerParams: WorkerParameters
+    workerParams: WorkerParameters,
+    private val repository: CloudMessageRepository
 ): CoroutineWorker(context, workerParams){
     private val bluetoothAdapter: BluetoothAdapter? by lazy {
         val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -42,10 +46,10 @@ class BLEScanWorker (
     val serviceUuid = ParcelUuid(UUID.fromString(uuidString))
     val context = this;
     var isDeviceFound = false
-    private val scanResults = mutableListOf<ScanResult>()
+    private val scanResults = mutableStateOf<Boolean>(false)
 
     val scanner = bluetoothAdapter?.bluetoothLeScanner
-    private val scanCallback = object : ScanCallback() {
+    private val scanCallback: ScanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             if (isDeviceFound) return
             try {
@@ -56,25 +60,7 @@ class BLEScanWorker (
                 val msgUtf8 = raw?.toString(Charsets.UTF_8)
                 val msgHex = raw?.joinToString(separator = " ") { String.format("%02X", it) }
 
-                val inputDataForWorker = workDataOf(
-                    "SCAN_RESULT_DATA" to true
-                )
-
-                val uploadRequest = OneTimeWorkRequestBuilder<CallCloudFunctionWorker>()
-                    .setInputData(inputDataForWorker)
-                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                    .setConstraints(
-                        Constraints.Builder()
-                            .setRequiredNetworkType(NetworkType.CONNECTED)
-                            .build()
-                    )
-                    .build()
-
-                WorkManager.getInstance(context).enqueueUniqueWork(
-                    "Upload_Scan_Job",
-                    ExistingWorkPolicy.KEEP,
-                    uploadRequest
-                )
+                scanResults.value = true
 
                 // MATCH FOUND! Send success broadcast and stop scanning
                 Log.d("debug", "onScanResult: MATCH FOUND! callbackType=$callbackType device=$address rssi=$rssi msgUtf8=$msgUtf8 msgHex=$msgHex")
@@ -101,29 +87,43 @@ class BLEScanWorker (
     override suspend fun doWork(): Result {
         Log.d("BLEScanner", "doWorkが実行されました")
         val settings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
+        // Changed to setServiceData to match BLEAdvertiser's packet structure (UUID in Service Data, not Service UUID list)
         val filter = ScanFilter.Builder()
-            .setServiceUuid(serviceUuid)
+            .setServiceData(serviceUuid, null)
             .build()
         try {
             if(ActivityCompat.checkSelfPermission(applicationContext, android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
                 scanner?.startScan(listOf(filter), settings, scanCallback)
-                Log.d("BLEScanWorker", "BLEScanを開始しました")
-            }
-            delay(45_000L)
-            scanner?.stopScan(scanCallback)
 
-            val outputData = workDataOf(
-                "IS_FOUND" to true
+            }
+            Log.d("BLEScanWorker", "${serviceUuid}")
+            Log.d("BLEScanWorker", "BLEScanを開始しました")
+            delay(30_000L)
+            scanner?.stopScan(scanCallback)
+            Log.d("BLEScanWorker", "BLEScanを停止しました")
+            var outputData = workDataOf(
+                "IS_FOUND" to false
             )
-            Result.success(outputData)
+            if(scanResults.value == true)
+            {
+                outputData = workDataOf(
+                    "IS_FOUND" to true
+                )
+                try {
+                    repository.callHandleProximityVerificationResultBackGround(true)
+                } catch(e: Exception){
+                    Log.d("BLEScanWorker", "handleProximityVerificationResultの呼び出しに失敗しました")
+                    Log.d("BLEScanWorker", "${e.message}")
+                }
+            }
+            return Result.success(outputData)
         } catch (e: Exception) {
             Log.d("Error", "BLE Scanに失敗しました")
             Log.d("Error", "${e.message}")
-            Result.failure()
+            return Result.failure()
         }
-        return Result.failure()
     }
 
 }
