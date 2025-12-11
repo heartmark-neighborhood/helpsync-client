@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.helpsync.blescanner.BLEScanWorker
 import com.example.helpsync.data.DeviceIdDataSource
 import com.example.helpsync.data.HelpRequestIdDataSource
 import com.example.helpsync.location_worker.LocationWorker
@@ -13,6 +14,7 @@ import com.example.helpsync.viewmodel.DeviceManagementVewModel
 import com.example.helpsync.viewmodel.HelpMarkHolderViewModel
 import com.example.helpsync.viewmodel.SupporterViewModel
 import com.example.helpsync.viewmodel.UserViewModel
+import com.example.helpsync.worker.CallCloudFunctionWorker
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.workmanager.dsl.worker
 import org.koin.core.qualifier.named
@@ -63,5 +65,11 @@ val appModule = module {
         )
     }
 
+    worker {
+        CallCloudFunctionWorker(get(), get(), get())
+    }
 
+    worker {
+        BLEScanWorker(get(), get(), get())
+    }
 }

@@ -20,6 +20,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.example.helpsync.blescanner.BLEScanWorker
 import com.example.helpsync.blescanner.BLEScanner
 import com.example.helpsync.viewmodel.SupporterViewModel
 import org.json.JSONObject
@@ -66,18 +72,17 @@ fun SupporterHomeScreen(
             }
 
             if (!uuidToScan.isNullOrBlank() && uuidToScan != "string") {
-                Log.d("SupporterHome", "🚀 Received scan request for UUID: $uuidToScan")
-                val scanIntent = Intent(context, BLEScanner::class.java).apply {
-                    putExtra("UUID", uuidToScan)
-                    putExtra("REQUEST_ID", viewModel.getHelpRequestId() ?: "")
-                }
-                try {
-                    ContextCompat.startForegroundService(context, scanIntent)
-                    Log.d("SupporterHome", " BLE scan service started.")
-                } catch (e: Exception) {
-                    Log.e("SupporterHome", "Error starting BLE scan service: ${e.message}")
-                    Toast.makeText(context, "スキャン開始エラー", Toast.LENGTH_SHORT).show()
-                }
+                val inputData = workDataOf("SCAN_UUID" to uuidToScan)
+                val bleScanWorkRequest = OneTimeWorkRequestBuilder<BLEScanWorker>()
+                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    .setInputData(inputData)
+                    .build()
+                val workManager = WorkManager.getInstance(context)
+                workManager.enqueueUniqueWork(
+                    "BLEScanWork",
+                    ExistingWorkPolicy.REPLACE,
+                    bleScanWorkRequest
+                )
             } else {
                 Log.d(
                     "SupporterHome",

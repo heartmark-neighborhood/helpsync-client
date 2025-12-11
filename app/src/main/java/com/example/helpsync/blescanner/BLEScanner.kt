@@ -28,6 +28,14 @@ import com.google.android.gms.tasks.OnCompleteListener
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.example.helpsync.worker.CallCloudFunctionWorker
 import java.util.UUID
 
 class BLEScanner() : Service() {
@@ -78,15 +86,37 @@ class BLEScanner() : Service() {
             return
         }
         val context = this;
+        var isDeviceFound = false
         scanCallback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
+                if (isDeviceFound) return
                 try {
+                    isDeviceFound = true
                     val address = result.device?.address
                     val rssi = result.rssi
                     val raw = result.scanRecord?.getServiceData(ParcelUuid(serviceUuid))
                     val msgUtf8 = raw?.toString(Charsets.UTF_8)
                     val msgHex = raw?.joinToString(separator = " ") { String.format("%02X", it) }
-                    
+
+                    val inputDataForWorker = workDataOf(
+                        "SCAN_RESULT_DATA" to true
+                    )
+
+                    val uploadRequest = OneTimeWorkRequestBuilder<CallCloudFunctionWorker>()
+                        .setInputData(inputDataForWorker)
+                        .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                        .setConstraints(
+                            Constraints.Builder()
+                                .setRequiredNetworkType(NetworkType.CONNECTED)
+                                .build()
+                        )
+                        .build()
+
+                    WorkManager.getInstance(context).enqueueUniqueWork(
+                        "Upload_Scan_Job",
+                        ExistingWorkPolicy.KEEP,
+                        uploadRequest
+                    )
                     // Log all scan results for debugging
                     if (raw == null) {
                         Log.v(TAG, "onScanResult: device=$address rssi=$rssi (no matching service data)")
@@ -113,7 +143,11 @@ class BLEScanner() : Service() {
                     Log.d(TAG, "onScanResult: stopping scan after successful match")
                     handler?.removeCallbacksAndMessages(null)  // Cancel timeout
                     try {
-                        scanner.stopScan(scanCallback)
+                        if(checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
+                            scanner.stopScan(scanCallback)
+                        } else {
+                            Log.d("Error", "stopScanに失敗しました")
+                        }
                     } catch (e: Exception) {
                         Log.w(TAG, "onScanResult: stopScan threw", e)
                     }

@@ -3,12 +3,18 @@ package com.example.helpsync.repository
 import android.util.Log
 import com.example.helpsync.data.DeviceIdDataSource
 import com.example.helpsync.data.HelpRequestIdDataSource
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.functions.ktx.functions
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import org.json.JSONObject
 
 interface CloudMessageRepository {
     val bleRequestMessageFlow: SharedFlow<Map<String, String>>
@@ -21,13 +27,14 @@ interface CloudMessageRepository {
     suspend fun getHelpRequestId() : String?
     suspend fun saveHelpRequestId(helpRequestId: String?)
     suspend fun callRenewDeviceToken(token: String)
+    suspend fun callHandleProximityVerificationResultBackGround(scanResult: Boolean)
 }
 
 class CloudMessageRepositoryImpl (
     private val deviceIdDataSource: DeviceIdDataSource,
     private val helpRequestIdDataSource: HelpRequestIdDataSource
 ): CloudMessageRepository {
-
+    private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val _bleRequestMessageFlow = MutableSharedFlow<Map<String, String>>(
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
@@ -50,10 +57,22 @@ class CloudMessageRepositoryImpl (
                 }
             }
             "proximity-verification" -> {
-                val success = _bleRequestMessageFlow.tryEmit(data)
-                if(!success) {
-                    Log.w("proximity-verificationFCM", "Failed to emit proximity-verificationFCM data")
+                val rawData = data["data"]
+                val json = JSONObject(rawData)
+                val helpRequestId = json.getString("helpRequestId")
+                repositoryScope.launch {
+                    try {
+                        saveHelpRequestId(helpRequestId)
+                        val success = _bleRequestMessageFlow.tryEmit(data)
+                        if(!success) {
+                            Log.w("proximity-verificationFCM", "Failed to emit proximity-verificationFCM data")
+                        }
+                    } catch(e: Exception) {
+                        Log.d("Debug", "HelpRequestIdの保存に失敗しました")
+                        Log.d("Debug", "${e.message}")
+                    }
                 }
+
             }
 
         }
@@ -68,6 +87,30 @@ class CloudMessageRepositoryImpl (
         )
 
         val callResult = functions.getHttpsCallable("RenewDeviceToken").call(data).await()
+    }
+
+    override suspend fun callHandleProximityVerificationResultBackGround(scanResult: Boolean) {
+        val helpRequestId = try {
+            getHelpRequestId()
+        } catch (e:Exception) {
+            Log.d("Error", "HelpRequestIdの取得に失敗しました")
+            Log.d("Error", "Error Message:${e.message}")
+        }
+        try {
+            val functions = Firebase.functions("asia-northeast2")
+            val uid: String? = FirebaseAuth.getInstance().currentUser?.uid
+            val data = hashMapOf(
+                "verificationResult" to scanResult,
+                "helpRequestId" to helpRequestId,
+                "userId" to uid
+            )
+
+            Log.d("Supporter", "call HandleProximityVerificationResult in background")
+            val callResult = functions.getHttpsCallable("handleProximityVerificationResult").call(data).await()
+        } catch(e: Exception) {
+            Log.d("Error", "handleProximityVerificationResultの実行に失敗しました")
+            Log.d("Error", "Error message: ${e.message}")
+        }
     }
 
     override suspend fun getDeviceId(): String? {
