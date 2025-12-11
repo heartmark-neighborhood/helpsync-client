@@ -28,6 +28,7 @@ private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 class HelpRequestMessageReceiver : FirebaseMessagingService(), KoinComponent{
     private val repository: CloudMessageRepository by inject()
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         if(remoteMessage.data.isNotEmpty()) {
             val receivedData = remoteMessage.data
