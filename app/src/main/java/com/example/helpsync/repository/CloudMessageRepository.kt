@@ -6,10 +6,15 @@ import com.example.helpsync.data.HelpRequestIdDataSource
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.functions.ktx.functions
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import org.json.JSONObject
 
 interface CloudMessageRepository {
     val bleRequestMessageFlow: SharedFlow<Map<String, String>>
@@ -29,7 +34,7 @@ class CloudMessageRepositoryImpl (
     private val deviceIdDataSource: DeviceIdDataSource,
     private val helpRequestIdDataSource: HelpRequestIdDataSource
 ): CloudMessageRepository {
-
+    private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val _bleRequestMessageFlow = MutableSharedFlow<Map<String, String>>(
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
@@ -52,10 +57,22 @@ class CloudMessageRepositoryImpl (
                 }
             }
             "proximity-verification" -> {
-                val success = _bleRequestMessageFlow.tryEmit(data)
-                if(!success) {
-                    Log.w("proximity-verificationFCM", "Failed to emit proximity-verificationFCM data")
+                val rawData = data["data"]
+                val json = JSONObject(rawData)
+                val helpRequestId = json.getString("helpRequestId")
+                repositoryScope.launch {
+                    try {
+                        saveHelpRequestId(helpRequestId)
+                        val success = _bleRequestMessageFlow.tryEmit(data)
+                        if(!success) {
+                            Log.w("proximity-verificationFCM", "Failed to emit proximity-verificationFCM data")
+                        }
+                    } catch(e: Exception) {
+                        Log.d("Debug", "HelpRequestIdの保存に失敗しました")
+                        Log.d("Debug", "${e.message}")
+                    }
                 }
+
             }
 
         }

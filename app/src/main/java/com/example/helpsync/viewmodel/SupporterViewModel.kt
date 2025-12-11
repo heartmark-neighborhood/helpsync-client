@@ -46,7 +46,7 @@ class SupporterViewModel(
         }
     }
 
-    fun handleFCMData(data: Map<String, String>) {
+    suspend fun handleFCMData(data: Map<String, String>) {
         when(data["type"]) {
             "proximity-verification" -> {
                 _bleRequestUuid.value = data
