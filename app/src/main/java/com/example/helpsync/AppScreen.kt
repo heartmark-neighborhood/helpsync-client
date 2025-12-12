@@ -10,6 +10,7 @@ enum class AppScreen {
     SupporterHome,
     RequestAcceptanceScreen,
     RequestDetail,
+    HelpMarkHolderScreen,
     HelpMarkHolderHome,
     HelpMarkHolderProfile,
     HelpMarkHolderProfileFromSettings,

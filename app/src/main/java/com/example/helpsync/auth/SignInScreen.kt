@@ -1,5 +1,6 @@
 package com.example.helpsync.auth
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -12,15 +13,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import com.example.helpsync.viewmodel.UserViewModel
+import com.example.helpsync.viewmodel.DeviceManagementVewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignInScreen(
     onNavigateToSignUp: () -> Unit,
     onSignInSuccess: () -> Unit,
-    userViewModel: UserViewModel = viewModel()
+    userViewModel: UserViewModel = koinViewModel(),
+    deviceViewModel: DeviceManagementVewModel = koinViewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }

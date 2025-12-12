@@ -1,9 +1,11 @@
 package com.example.helpsync.help_mark_holder_profile_screen
 
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,10 +13,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,11 +30,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.core.content.ContextCompat
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import android.Manifest
+import android.os.Build
+import androidx.annotation.RequiresApi
 import coil.compose.AsyncImage
+import com.example.helpsync.location_worker.LocationWorker
+import com.example.helpsync.viewmodel.DeviceManagementVewModel
 import com.example.helpsync.viewmodel.UserViewModel
+import org.koin.androidx.compose.koinViewModel
 import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 
+@RequiresApi(Build.VERSION_CODES.Q)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HelpMarkHolderProfileScreen(
@@ -43,7 +59,9 @@ fun HelpMarkHolderProfileScreen(
     onBackClick: () -> Unit = {},
     onCompleteClick: () -> Unit = {},
     onPhotoSave: (Uri) -> Unit = {},
-    userViewModel: UserViewModel = viewModel()
+    onSignOut: () -> Unit = {},
+    userViewModel: UserViewModel = koinViewModel(),
+    deviceViewModel: DeviceManagementVewModel = koinViewModel()
 ) {
     // ローカルで状態を管理
     var localNickname by remember(nickname) { mutableStateOf(nickname) }
@@ -57,6 +75,7 @@ fun HelpMarkHolderProfileScreen(
     val currentUser = userViewModel.currentUser
     val isLoading = userViewModel.isLoading
     val errorMessage = userViewModel.errorMessage
+    val firebaseUser = userViewModel.getCurrentFirebaseUser()
     
     // Contextを取得（Composable関数内でのみ可能）
     val context = LocalContext.current
@@ -74,7 +93,7 @@ fun HelpMarkHolderProfileScreen(
                 hashBytes.joinToString("") { "%02x".format(it) }
             } else null
         } catch (e: Exception) {
-            android.util.Log.e("HelpMarkHolderProfileScreen", "Error calculating image hash: ${e.message}")
+            Log.e("HelpMarkHolderProfileScreen", "Error calculating image hash: ${e.message}")
             null
         }
     }
@@ -82,9 +101,9 @@ fun HelpMarkHolderProfileScreen(
     // 初回読み込み時にユーザー情報を設定
     LaunchedEffect(currentUser) {
         currentUser?.let { user ->
-            android.util.Log.d("HelpMarkHolderProfileScreen", "👤 Current user loaded: ${user.nickname}")
-            android.util.Log.d("HelpMarkHolderProfileScreen", "📸 Existing iconUrl: ${user.iconUrl}")
-            android.util.Log.d("HelpMarkHolderProfileScreen", "📝 Existing physicalFeatures: ${user.physicalFeatures}")
+            Log.d("HelpMarkHolderProfileScreen", "👤 Current user loaded: ${user.nickname}")
+            Log.d("HelpMarkHolderProfileScreen", "📸 Existing iconUrl: ${user.iconUrl}")
+            Log.d("HelpMarkHolderProfileScreen", "📝 Existing physicalFeatures: ${user.physicalFeatures}")
             
             // データが空の場合は既存のものを設定
             if (localNickname.isEmpty()) {
@@ -95,8 +114,8 @@ fun HelpMarkHolderProfileScreen(
             }
             
             // 新しく選択された画像がない場合は、既存のiconUrlを使用
-            if (localPhotoUri == null && !user.iconUrl.isNullOrEmpty()) {
-                android.util.Log.d("HelpMarkHolderProfileScreen", "🔄 Using existing iconUrl for display")
+            if (localPhotoUri == null && user.iconUrl.isNotEmpty()) {
+                Log.d("HelpMarkHolderProfileScreen", "🔄 Using existing iconUrl for display")
             }
         }
     }
@@ -126,37 +145,37 @@ fun HelpMarkHolderProfileScreen(
     
     // デバッグログを追加
     LaunchedEffect(localNickname, localPhysicalFeatures, localPhotoUri, currentUser) {
-        android.util.Log.d("HelpMarkHolderProfileScreen", "=== Button State Debug ===")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "localNickname: '$localNickname'")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "localPhysicalFeatures: '$localPhysicalFeatures'")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "localPhotoUri: $localPhotoUri")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "hasExistingPhoto: $hasExistingPhoto")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "isFormValid: $isFormValid")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "isInitialSetup: $isInitialSetup")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "hasAnyChanges: $hasAnyChanges")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "isButtonEnabled: $isButtonEnabled")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "Current user nickname: '${currentUser?.nickname}'")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "Current user physicalFeatures: '${currentUser?.physicalFeatures}'")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "Current user iconUrl: '${currentUser?.iconUrl}'")
+        Log.d("HelpMarkHolderProfileScreen", "=== Button State Debug ===")
+        Log.d("HelpMarkHolderProfileScreen", "localNickname: '$localNickname'")
+        Log.d("HelpMarkHolderProfileScreen", "localPhysicalFeatures: '$localPhysicalFeatures'")
+        Log.d("HelpMarkHolderProfileScreen", "localPhotoUri: $localPhotoUri")
+        Log.d("HelpMarkHolderProfileScreen", "hasExistingPhoto: $hasExistingPhoto")
+        Log.d("HelpMarkHolderProfileScreen", "isFormValid: $isFormValid")
+        Log.d("HelpMarkHolderProfileScreen", "isInitialSetup: $isInitialSetup")
+        Log.d("HelpMarkHolderProfileScreen", "hasAnyChanges: $hasAnyChanges")
+        Log.d("HelpMarkHolderProfileScreen", "isButtonEnabled: $isButtonEnabled")
+        Log.d("HelpMarkHolderProfileScreen", "Current user nickname: '${currentUser?.nickname}'")
+        Log.d("HelpMarkHolderProfileScreen", "Current user physicalFeatures: '${currentUser?.physicalFeatures}'")
+        Log.d("HelpMarkHolderProfileScreen", "Current user iconUrl: '${currentUser?.iconUrl}'")
     }
     
     // 画像選択のランチャー
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        android.util.Log.d("HelpMarkHolderProfileScreen", "=== 画像選択結果 ===")
-        android.util.Log.d("HelpMarkHolderProfileScreen", "Selected URI: $uri")
+        Log.d("HelpMarkHolderProfileScreen", "=== 画像選択結果 ===")
+        Log.d("HelpMarkHolderProfileScreen", "Selected URI: $uri")
         uri?.let { selectedUri ->
             try {
                 val contentResolver = context.contentResolver
                 val mimeType = contentResolver.getType(selectedUri)
-                android.util.Log.d("HelpMarkHolderProfileScreen", "📄 MIME type: $mimeType")
+                Log.d("HelpMarkHolderProfileScreen", "📄 MIME type: $mimeType")
                 
                 // ファイルサイズ取得
                 val inputStream = contentResolver.openInputStream(selectedUri)
                 val fileSize = inputStream?.available() ?: 0
                 inputStream?.close()
-                android.util.Log.d("HelpMarkHolderProfileScreen", "📏 File size: $fileSize bytes")
+                Log.d("HelpMarkHolderProfileScreen", "📏 File size: $fileSize bytes")
                 
                 // ファイル内容の最初の部分を読んで分析
                 val previewStream = contentResolver.openInputStream(selectedUri)
@@ -167,39 +186,39 @@ fun HelpMarkHolderProfileScreen(
                 val hexString = buffer.take(bytesRead).joinToString(" ") { 
                     String.format("%02X", it) 
                 }
-                android.util.Log.d("HelpMarkHolderProfileScreen", "🔍 File header (first $bytesRead bytes): $hexString")
+                Log.d("HelpMarkHolderProfileScreen", "🔍 File header (first $bytesRead bytes): $hexString")
                 
                 // ファイル種別を内容から推測
                 val fileTypeFromContent = when {
                     buffer.size >= 2 && buffer[0] == 0xFF.toByte() && buffer[1] == 0xD8.toByte() -> "JPEG"
-                    buffer.size >= 8 && buffer[1] == 'P'.toByte() && buffer[2] == 'N'.toByte() && buffer[3] == 'G'.toByte() -> "PNG"
-                    buffer.size >= 12 && buffer[8] == 'W'.toByte() && buffer[9] == 'E'.toByte() && buffer[10] == 'B'.toByte() && buffer[11] == 'P'.toByte() -> "WEBP"
+                    buffer.size >= 8 && buffer[1] == 'P'.code.toByte() && buffer[2] == 'N'.code.toByte() && buffer[3] == 'G'.code.toByte() -> "PNG"
+                    buffer.size >= 12 && buffer[8] == 'W'.code.toByte() && buffer[9] == 'E'.code.toByte() && buffer[10] == 'B'.code.toByte() && buffer[11] == 'P'.code.toByte() -> "WEBP"
                     else -> "UNKNOWN"
                 }
-                android.util.Log.d("HelpMarkHolderProfileScreen", "🎯 Content-based file type: $fileTypeFromContent")
+                Log.d("HelpMarkHolderProfileScreen", "🎯 Content-based file type: $fileTypeFromContent")
                 
                 // 画像ファイルの妥当性チェック
                 val isValidImageMime = mimeType?.startsWith("image/") == true
                 val isValidImageContent = fileTypeFromContent != "UNKNOWN"
                 
                 if (!isValidImageMime && !isValidImageContent) {
-                    android.util.Log.e("HelpMarkHolderProfileScreen", "❌ ERROR: Selected file is not a valid image!")
+                    Log.e("HelpMarkHolderProfileScreen", "❌ ERROR: Selected file is not a valid image!")
                 } else {
-                    android.util.Log.d("HelpMarkHolderProfileScreen", "✅ Valid image file selected")
+                    Log.d("HelpMarkHolderProfileScreen", "✅ Valid image file selected")
                     localPhotoUri = selectedUri
                     
                     // 画像のハッシュ値を計算（重複チェック用）
-                    android.util.Log.d("HelpMarkHolderProfileScreen", "🔍 Calculating image hash for duplicate detection...")
+                    Log.d("HelpMarkHolderProfileScreen", "🔍 Calculating image hash for duplicate detection...")
                     localPhotoHash = calculateImageHash(selectedUri)
-                    android.util.Log.d("HelpMarkHolderProfileScreen", "📝 Image hash: $localPhotoHash")
+                    Log.d("HelpMarkHolderProfileScreen", "📝 Image hash: $localPhotoHash")
                     
                     onPhotoChange(selectedUri)
                 }
             } catch (e: Exception) {
-                android.util.Log.e("HelpMarkHolderProfileScreen", "❌ Error analyzing selected file: ${e.message}", e)
+                Log.e("HelpMarkHolderProfileScreen", "❌ Error analyzing selected file: ${e.message}", e)
             }
         } ?: run {
-            android.util.Log.d("HelpMarkHolderProfileScreen", "❌ 画像選択がキャンセルされました")
+            Log.d("HelpMarkHolderProfileScreen", "❌ 画像選択がキャンセルされました")
         }
     }
 
@@ -217,7 +236,7 @@ fun HelpMarkHolderProfileScreen(
             },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "戻る")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -233,7 +252,6 @@ fun HelpMarkHolderProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 認証状態のチェック
-            val firebaseUser = userViewModel.getCurrentFirebaseUser()
             if (firebaseUser == null) {
                 // 認証されていない場合の警告表示
                 Card(
@@ -280,9 +298,9 @@ fun HelpMarkHolderProfileScreen(
 
             // 画像選択エリア - 直接タップで選択
             Card(
-                onClick = { 
-                    android.util.Log.d("HelpMarkHolderProfileScreen", "🖼️ Image area clicked!")
-                    imagePickerLauncher.launch("image/*") 
+                onClick = {
+                    Log.d("HelpMarkHolderProfileScreen", "🖼️ Image area clicked!")
+                    imagePickerLauncher.launch("image/*")
                 },
                 shape = CircleShape,
                 modifier = Modifier
@@ -310,7 +328,7 @@ fun HelpMarkHolderProfileScreen(
                 ) {
                     // 表示する画像を決定
                     val imageToDisplay = localPhotoUri ?: currentUser?.iconUrl
-                    
+
                     if (hasExistingPhoto && imageToDisplay != null) {
                         AsyncImage(
                             model = imageToDisplay,
@@ -424,7 +442,7 @@ fun HelpMarkHolderProfileScreen(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             // ニックネーム入力セクション
             Text(
                 text = "ニックネーム",
@@ -432,9 +450,9 @@ fun HelpMarkHolderProfileScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth()
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             OutlinedTextField(
                 value = localNickname,
                 onValueChange = { localNickname = it },
@@ -442,13 +460,15 @@ fun HelpMarkHolderProfileScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = if (hasNicknameChanges) Color(0xFF4CAF50) else Color(0xFF2196F3),
+                    focusedBorderColor = if (hasNicknameChanges) Color(0xFF4CAF50) else Color(
+                        0xFF2196F3
+                    ),
                     unfocusedBorderColor = if (hasNicknameChanges) Color(0xFF81C784) else MaterialTheme.colorScheme.outline
                 )
             )
-            
+
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             // 支援内容セクション
             Text(
                 text = "身体的特徴",
@@ -456,9 +476,9 @@ fun HelpMarkHolderProfileScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.fillMaxWidth()
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             OutlinedTextField(
                 value = localPhysicalFeatures,
                 onValueChange = { localPhysicalFeatures = it },
@@ -473,23 +493,201 @@ fun HelpMarkHolderProfileScreen(
                 },
                 shape = RoundedCornerShape(8.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = if (hasPhysicalFeaturesChanges) Color(0xFF4CAF50) else Color(0xFF2196F3),
-                    unfocusedBorderColor = if (hasPhysicalFeaturesChanges) Color(0xFF81C784) else Color(0xFFE0E0E0)
+                    focusedBorderColor = if (hasPhysicalFeaturesChanges) Color(0xFF4CAF50) else Color(
+                        0xFF2196F3
+                    ),
+                    unfocusedBorderColor = if (hasPhysicalFeaturesChanges) Color(0xFF81C784) else Color(
+                        0xFFE0E0E0
+                    )
                 )
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Text(
                 text = "身体的特徴を記入することで、適切な支援者とマッチングしやすくなります",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFF757575),
                 modifier = Modifier.fillMaxWidth()
             )
-            
+
             Spacer(modifier = Modifier.height(48.dp))
+
+            var backgroundLocationEnabled by remember { mutableStateOf(false) }
+            val fineLocationPermission = Manifest.permission.ACCESS_FINE_LOCATION
+            val backgroundLocationPermission = Manifest.permission.ACCESS_BACKGROUND_LOCATION
+
+            fun checkPermissions() {
+                val fineLocationGranted = ContextCompat.checkSelfPermission(
+                    context,
+                    fineLocationPermission
+                ) == PackageManager.PERMISSION_GRANTED
+                val backgroundLocationGranted = ContextCompat.checkSelfPermission(
+                    context,
+                    backgroundLocationPermission
+                ) == PackageManager.PERMISSION_GRANTED
+                backgroundLocationEnabled = fineLocationGranted && backgroundLocationGranted
+                Log.d(
+                    "HelpMarkHolderProfileScreen",
+                    "Permissions checked: fineLocation=$fineLocationGranted, backgroundLocation=$backgroundLocationGranted"
+                )
+            }
+
+            LaunchedEffect(Unit) {
+                checkPermissions()
+            }
+
+            val backgroundLocationLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission(),
+                onResult = { isGranted ->
+                    backgroundLocationEnabled = isGranted
+                    if (isGranted) {
+                        Log.d(
+                            "HelpMarkHolderProfileScreen",
+                            "Background location permission GRANTED"
+                        )
+                    } else {
+                        Log.e(
+                            "HelpMarkHolderProfileScreen",
+                            "Background location permission DENIED"
+                        )
+                    }
+                }
+            )
+
+            val fineLocationLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission(),
+                onResult = { isGranted ->
+                    if (isGranted) {
+                        Log.d(
+                            "HelpMarkHolderProfileScreen",
+                            "Fine location permission GRANTED, requesting background location..."
+                        )
+                        backgroundLocationLauncher.launch(backgroundLocationPermission)
+                    } else {
+                        Log.e("HelpMarkHolderProfileScreen", "Fine location permission DENIED")
+                        backgroundLocationEnabled = false
+                    }
+                }
+            )
+
+            LaunchedEffect(backgroundLocationEnabled) {
+                val workManager = WorkManager.getInstance(context)
+                if (backgroundLocationEnabled) {
+                    Log.d(
+                        "HelpMarkHolderProfileScreen",
+                        "バックグラウンドでの位置情報が有効になりました。WorkManagerのタスクを開始します。"
+                    )
+                    val constraints = Constraints.Builder()
+                        .setRequiresBatteryNotLow(true)
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build()
+
+                    Log.d(
+                        "HelpMarkHolderProfileScreen",
+                        "Building PeriodicWorkRequest for LocationWorker."
+                    )
+                    val periodicWorkRequest =
+                        PeriodicWorkRequestBuilder<LocationWorker>(15, TimeUnit.MINUTES)
+                            .setConstraints(constraints)
+                            .build()
+                    workManager.enqueueUniquePeriodicWork(
+                        LocationWorker.WORK_NAME,
+                        ExistingPeriodicWorkPolicy.UPDATE, // 既存のタスクがあれば何もしない
+                        periodicWorkRequest
+                    )
+                    val oneTime = androidx.work.OneTimeWorkRequestBuilder<LocationWorker>()
+                        .setConstraints(constraints)
+                        .build()
+                    workManager.enqueue(oneTime)
+                    Log.d("HelpMarkHolderProfileScreen", "Enqueued one-time LocationWorker to run immediately for priming.")
+                    Log.d(
+                        "HelpMarkHolderProfileScreen",
+                        "WorkManager task (${LocationWorker.WORK_NAME}) enqueued with policy UPDATE."
+                    )
+                } else {
+                    Log.d(
+                        "HelpMarkHolderProfileScreen",
+                        "Background location disabled. Cancelling WorkManager task."
+                    )
+                    workManager.cancelUniqueWork(LocationWorker.WORK_NAME)
+                    Log.d(
+                        "HelpMarkHolderProfileScreen",
+                        "WorkManager task (${LocationWorker.WORK_NAME}) cancelled."
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "バックグラウンドでの位置情報",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Status Indicator
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val statusIcon =
+                        if (backgroundLocationEnabled) Icons.Default.Check else Icons.Default.Warning
+                    val iconTint =
+                        if (backgroundLocationEnabled) Color(0xFF4CAF50) else Color(0xFFFFA000)
+                    Icon(imageVector = statusIcon, contentDescription = "Status", tint = iconTint)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (backgroundLocationEnabled) "許可されています" else "許可されていません",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "アプリがバックグラウンドにあるときでも、助けを必要としている人を見つけるために使用されます。この機能を有効にするには、位置情報の権限を「常に許可」に設定する必要があります。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Action Button
+                Button(
+                    onClick = {
+                        if (backgroundLocationEnabled) {
+                            // Open App Settings
+                            Log.d("HelpMarkHolderProfileScreen", "Opening app settings...")
+                            val intent =
+                                android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            val uri = Uri.fromParts("package", context.packageName, null)
+                            intent.data = uri
+                            context.startActivity(intent)
+                        } else {
+                            // Request Permissions
+                            Log.d(
+                                "HelpMarkHolderProfileScreen",
+                                "Requesting background location permission..."
+                            )
+                            val fineLocationGranted = ContextCompat.checkSelfPermission(
+                                context,
+                                fineLocationPermission
+                            ) == PackageManager.PERMISSION_GRANTED
+                            if (fineLocationGranted) {
+                                backgroundLocationLauncher.launch(backgroundLocationPermission)
+                            } else {
+                                fineLocationLauncher.launch(fineLocationPermission)
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (backgroundLocationEnabled) "設定を開く" else "権限を許可する")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
             
-            // 完了ボタン
+              // 完了ボタン
             Button(
                 onClick = { 
                     if (isLoading) return@Button
@@ -569,6 +767,35 @@ fun HelpMarkHolderProfileScreen(
                         color = Color(0xFFD32F2F),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+            
+            if (firebaseUser != null) {
+                Spacer(modifier = Modifier.height(32.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        Log.d("HelpMarkHolderProfileScreen", "Sign out button clicked")
+                        // デバイス削除を先に実行してから、完了後にサインアウト
+                        deviceViewModel.callDeleteDevice {
+                            Log.d("HelpMarkHolderProfileScreen", "Device deletion completed")
+                            // サインアウト処理
+                            userViewModel.signOut()
+                            onSignOut()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFFD32F2F)
+                    ),
+                    border = BorderStroke(1.dp, Color(0xFFD32F2F)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "サインアウト",
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }

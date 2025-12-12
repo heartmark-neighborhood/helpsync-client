@@ -13,16 +13,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import com.example.helpsync.data.UserRole
 import com.example.helpsync.viewmodel.UserViewModel
+import com.example.helpsync.viewmodel.DeviceManagementVewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onNavigateToEdit: () -> Unit,
     onSignOut: () -> Unit,
-    userViewModel: UserViewModel = viewModel()
+    userViewModel: UserViewModel = koinViewModel(),
+    deviceViewModel: DeviceManagementVewModel = koinViewModel()
 ) {
     val user = userViewModel.currentUser
     val scrollState = rememberScrollState()
@@ -56,6 +58,7 @@ fun ProfileScreen(
                 
                 // サインアウトボタン
                 IconButton(onClick = {
+                    deviceViewModel.callDeleteDevice()
                     userViewModel.signOut()
                     onSignOut()
                 }) {
@@ -223,6 +226,32 @@ fun ProfileScreen(
             }
         }
         
+        if (user != null) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = {
+                    deviceViewModel.callDeleteDevice()
+                    userViewModel.signOut()
+                    onSignOut()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ExitToApp,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("サインアウト")
+            }
+        }
+
         // エラーメッセージ表示
         userViewModel.errorMessage?.let { error ->
             Card(

@@ -1,16 +1,21 @@
 package com.example.helpsync.supporter_setting_screen
 
+import android.annotation.SuppressLint
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,13 +25,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
+import android.util.Log
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import coil.compose.AsyncImage
+import com.example.helpsync.location_worker.LocationWorker
 import com.example.helpsync.viewmodel.UserViewModel
+import com.example.helpsync.viewmodel.DeviceManagementVewModel
+import org.koin.androidx.compose.koinViewModel
 import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 
 
 @Composable
@@ -35,10 +50,12 @@ fun SupporterSettingScreen(
     onNicknameChange: (String) -> Unit = {},
     photoUri: Uri? = null,
     onPhotoChange: (Uri?) -> Unit = {},
-    modifier: Modifier = Modifier,
+    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
     onEditClick: (String) -> Unit = {},
     onPhotoSave: (Uri) -> Unit = {},
-    userViewModel: UserViewModel // デフォルト値を削除して必須パラメータに
+    userViewModel: UserViewModel, // デフォルト値を削除して必須パラメータに
+    deviceViewModel: DeviceManagementVewModel = koinViewModel(),
+    onSignOut: () -> Unit = {}
 ) {
     // ローカルでニックネームと写真の状態を管理
     var localNickname by remember(nickname) { mutableStateOf(nickname) }
@@ -49,6 +66,8 @@ fun SupporterSettingScreen(
     // 初期状態の写真URIを保持（変更検出用）
     val initialPhotoUri by remember(photoUri) { mutableStateOf(photoUri) }
     var notificationsEnabled by remember { mutableStateOf(true) }
+    // サインアウト処理中かどうかを管理
+    var isSigningOut by remember { mutableStateOf(false) }
     
     // UserViewModelから現在のユーザー情報を取得
     val currentUser = userViewModel.currentUser
@@ -71,7 +90,7 @@ fun SupporterSettingScreen(
                 hashBytes.joinToString("") { "%02x".format(it) }
             } else null
         } catch (e: Exception) {
-            android.util.Log.e("SupporterSettingScreen", "Error calculating image hash: ${e.message}")
+            Log.e("SupporterSettingScreen", "Error calculating image hash: ${e.message}")
             null
         }
     }
@@ -79,8 +98,8 @@ fun SupporterSettingScreen(
     // 初回読み込み時にユーザー情報を設定
     LaunchedEffect(currentUser) {
         currentUser?.let { user ->
-            android.util.Log.d("SupporterSettingScreen", "👤 Current user loaded: ${user.nickname}")
-            android.util.Log.d("SupporterSettingScreen", "📸 Existing iconUrl: ${user.iconUrl}")
+            Log.d("SupporterSettingScreen", "👤 Current user loaded: ${user.nickname}")
+            Log.d("SupporterSettingScreen", "📸 Existing iconUrl: ${user.iconUrl}")
             
             // ニックネームが空の場合は既存のものを設定
             if (localNickname.isEmpty()) {
@@ -88,17 +107,17 @@ fun SupporterSettingScreen(
             }
             
             // 新しく選択された画像がない場合は、既存のiconUrlを使用
-            if (localPhotoUri == null && !user.iconUrl.isNullOrEmpty()) {
-                android.util.Log.d("SupporterSettingScreen", "🔄 Using existing iconUrl for display")
+            if (localPhotoUri == null && user.iconUrl.isNotEmpty()) {
+                Log.d("SupporterSettingScreen", "🔄 Using existing iconUrl for display")
             }
             
             // 既存画像のハッシュ値を計算（UserViewModelに保存されているか確認）
             // 注意: Firebase URLから直接ハッシュを計算するのは困難なので、
             // 別途ハッシュ値をデータベースに保存する仕組みが必要
-            if (!user.iconUrl.isNullOrEmpty() && currentPhotoHash == null) {
+            if (user.iconUrl.isNotEmpty() && currentPhotoHash == null) {
                 // 現在は既存画像のハッシュ値を取得する方法がないため、
                 // 新しい画像が選択された場合のみハッシュ比較を行う
-                android.util.Log.d("SupporterSettingScreen", "既存画像のハッシュ値取得はスキップ（Firebase URLから直接計算不可）")
+                Log.d("SupporterSettingScreen", "既存画像のハッシュ値取得はスキップ（Firebase URLから直接計算不可）")
             }
         }
     }
@@ -117,51 +136,51 @@ fun SupporterSettingScreen(
     
     // デバッグログを追加
     LaunchedEffect(localNickname, localPhotoUri, currentUser?.iconUrl) {
-        android.util.Log.d("SupporterSettingScreen", "=== Change Detection Debug ===")
-        android.util.Log.d("SupporterSettingScreen", "Parameter nickname: '$nickname'")
-        android.util.Log.d("SupporterSettingScreen", "Current user nickname: '$originalNickname'")
-        android.util.Log.d("SupporterSettingScreen", "Local nickname: '$localNickname'")
-        android.util.Log.d("SupporterSettingScreen", "Local nickname trimmed: '${localNickname.trim()}'")
-        android.util.Log.d("SupporterSettingScreen", "Initial photo URI (parameter): $photoUri")
-        android.util.Log.d("SupporterSettingScreen", "Local photo URI (selected): $localPhotoUri")
-        android.util.Log.d("SupporterSettingScreen", "Current user iconUrl: '${currentUser?.iconUrl}'")
-        android.util.Log.d("SupporterSettingScreen", "Local photo hash: $localPhotoHash")
-        android.util.Log.d("SupporterSettingScreen", "Current photo hash: $currentPhotoHash")
-        android.util.Log.d("SupporterSettingScreen", "Hash comparison: ${localPhotoHash != currentPhotoHash}")
-        android.util.Log.d("SupporterSettingScreen", "Photo selected: ${localPhotoUri != null}")
-        android.util.Log.d("SupporterSettingScreen", "IconUrl is empty: ${currentUser?.iconUrl.isNullOrEmpty()}")
-        android.util.Log.d("SupporterSettingScreen", "Has nickname changes: $hasNicknameChanges")
-        android.util.Log.d("SupporterSettingScreen", "Has photo changes: $hasPhotoChanges")
-        android.util.Log.d("SupporterSettingScreen", "Has existing photo: $hasExistingPhoto")
-        android.util.Log.d("SupporterSettingScreen", "Has any changes: $hasAnyChanges")
-        android.util.Log.d("SupporterSettingScreen", "Button enabled: $isButtonEnabled")
+        Log.d("SupporterSettingScreen", "=== Change Detection Debug ===")
+        Log.d("SupporterSettingScreen", "Parameter nickname: '$nickname'")
+        Log.d("SupporterSettingScreen", "Current user nickname: '$originalNickname'")
+        Log.d("SupporterSettingScreen", "Local nickname: '$localNickname'")
+        Log.d("SupporterSettingScreen", "Local nickname trimmed: '${localNickname.trim()}'")
+        Log.d("SupporterSettingScreen", "Initial photo URI (parameter): $photoUri")
+        Log.d("SupporterSettingScreen", "Local photo URI (selected): $localPhotoUri")
+        Log.d("SupporterSettingScreen", "Current user iconUrl: '${currentUser?.iconUrl}'")
+        Log.d("SupporterSettingScreen", "Local photo hash: $localPhotoHash")
+        Log.d("SupporterSettingScreen", "Current photo hash: $currentPhotoHash")
+        Log.d("SupporterSettingScreen", "Hash comparison: ${localPhotoHash != currentPhotoHash}")
+        Log.d("SupporterSettingScreen", "Photo selected: ${localPhotoUri != null}")
+        Log.d("SupporterSettingScreen", "IconUrl is empty: ${currentUser?.iconUrl.isNullOrEmpty()}")
+        Log.d("SupporterSettingScreen", "Has nickname changes: $hasNicknameChanges")
+        Log.d("SupporterSettingScreen", "Has photo changes: $hasPhotoChanges")
+        Log.d("SupporterSettingScreen", "Has existing photo: $hasExistingPhoto")
+        Log.d("SupporterSettingScreen", "Has any changes: $hasAnyChanges")
+        Log.d("SupporterSettingScreen", "Button enabled: $isButtonEnabled")
         val imageToDisplay = localPhotoUri ?: currentUser?.iconUrl
-        android.util.Log.d("SupporterSettingScreen", "Image to display: $imageToDisplay")
+        Log.d("SupporterSettingScreen", "Image to display: $imageToDisplay")
     }
     
     // 画像選択のランチャー
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        android.util.Log.d("SupporterSettingScreen", "=== 画像選択結果 ===")
-        android.util.Log.d("SupporterSettingScreen", "Selected URI: $uri")
+        Log.d("SupporterSettingScreen", "=== 画像選択結果 ===")
+        Log.d("SupporterSettingScreen", "Selected URI: $uri")
         uri?.let { selectedUri ->
-            android.util.Log.d("SupporterSettingScreen", "URI scheme: ${selectedUri.scheme}")
-            android.util.Log.d("SupporterSettingScreen", "URI path: ${selectedUri.path}")
-            android.util.Log.d("SupporterSettingScreen", "URI toString: ${selectedUri.toString()}")
-            android.util.Log.d("SupporterSettingScreen", "URI authority: ${selectedUri.authority}")
+            Log.d("SupporterSettingScreen", "URI scheme: ${selectedUri.scheme}")
+            Log.d("SupporterSettingScreen", "URI path: ${selectedUri.path}")
+            Log.d("SupporterSettingScreen", "URI toString: ${selectedUri.toString()}")
+            Log.d("SupporterSettingScreen", "URI authority: ${selectedUri.authority}")
             
             try {
                 // ファイルの詳細分析
                 val contentResolver = context.contentResolver
                 val mimeType = contentResolver.getType(selectedUri)
-                android.util.Log.d("SupporterSettingScreen", "📄 MIME type: $mimeType")
+                Log.d("SupporterSettingScreen", "📄 MIME type: $mimeType")
                 
                 // ファイルサイズ取得
                 val inputStream = contentResolver.openInputStream(selectedUri)
                 val fileSize = inputStream?.available() ?: 0
                 inputStream?.close()
-                android.util.Log.d("SupporterSettingScreen", "📏 File size: $fileSize bytes")
+                Log.d("SupporterSettingScreen", "📏 File size: $fileSize bytes")
                 
                 // ファイル内容の最初の部分を読んで分析
                 val previewStream = contentResolver.openInputStream(selectedUri)
@@ -172,63 +191,64 @@ fun SupporterSettingScreen(
                 val hexString = buffer.take(bytesRead).joinToString(" ") { 
                     String.format("%02X", it) 
                 }
-                android.util.Log.d("SupporterSettingScreen", "🔍 File header (first $bytesRead bytes): $hexString")
+                Log.d("SupporterSettingScreen", "🔍 File header (first $bytesRead bytes): $hexString")
                 
                 // ファイル種別を内容から推測
                 val fileTypeFromContent = when {
                     buffer.size >= 2 && buffer[0] == 0xFF.toByte() && buffer[1] == 0xD8.toByte() -> "JPEG"
-                    buffer.size >= 8 && buffer[1] == 'P'.toByte() && buffer[2] == 'N'.toByte() && buffer[3] == 'G'.toByte() -> "PNG"
-                    buffer.size >= 12 && buffer[8] == 'W'.toByte() && buffer[9] == 'E'.toByte() && buffer[10] == 'B'.toByte() && buffer[11] == 'P'.toByte() -> "WEBP"
+                    buffer.size >= 8 && buffer[1] == 'P'.code.toByte() && buffer[2] == 'N'.code.toByte() && buffer[3] == 'G'.code.toByte() -> "PNG"
+                    buffer.size >= 12 && buffer[8] == 'W'.code.toByte() && buffer[9] == 'E'.code.toByte() && buffer[10] == 'B'.code.toByte() && buffer[11] == 'P'.code.toByte() -> "WEBP"
                     else -> "UNKNOWN"
                 }
-                android.util.Log.d("SupporterSettingScreen", "🎯 Content-based file type: $fileTypeFromContent")
+                Log.d("SupporterSettingScreen", "🎯 Content-based file type: $fileTypeFromContent")
                 
                 // テキストファイルかどうかの判定
                 val isLikelyText = buffer.take(bytesRead).all { byte ->
                     byte in 0x09..0x0D || byte in 0x20..0x7E || byte >= 0 // ASCII範囲内
                 }
-                android.util.Log.d("SupporterSettingScreen", "📝 Appears to be text file: $isLikelyText")
+                Log.d("SupporterSettingScreen", "📝 Appears to be text file: $isLikelyText")
                 
                 if (isLikelyText && bytesRead > 0) {
                     val textContent = String(buffer, 0, bytesRead)
-                    android.util.Log.w("SupporterSettingScreen", "⚠️ WARNING: Selected file appears to be text: '$textContent'")
+                    Log.w("SupporterSettingScreen", "⚠️ WARNING: Selected file appears to be text: '$textContent'")
                 }
                 
                 // 画像ファイルの妥当性チェック
                 val isValidImageMime = mimeType?.startsWith("image/") == true
                 val isValidImageContent = fileTypeFromContent != "UNKNOWN"
                 
-                android.util.Log.d("SupporterSettingScreen", "✅ Validation results:")
-                android.util.Log.d("SupporterSettingScreen", "   Valid MIME type: $isValidImageMime")
-                android.util.Log.d("SupporterSettingScreen", "   Valid content: $isValidImageContent")
+                Log.d("SupporterSettingScreen", "✅ Validation results:")
+                Log.d("SupporterSettingScreen", "   Valid MIME type: $isValidImageMime")
+                Log.d("SupporterSettingScreen", "   Valid content: $isValidImageContent")
                 
                 if (!isValidImageMime && !isValidImageContent) {
-                    android.util.Log.e("SupporterSettingScreen", "❌ ERROR: Selected file is not a valid image!")
+                    Log.e("SupporterSettingScreen", "❌ ERROR: Selected file is not a valid image!")
                 } else {
-                    android.util.Log.d("SupporterSettingScreen", "✅ Valid image file selected")
+                    Log.d("SupporterSettingScreen", "✅ Valid image file selected")
                 }
                 
             } catch (e: Exception) {
-                android.util.Log.e("SupporterSettingScreen", "❌ Error analyzing selected file: ${e.message}", e)
+                Log.e("SupporterSettingScreen", "❌ Error analyzing selected file: ${e.message}", e)
             }
             
-            android.util.Log.d("SupporterSettingScreen", "✅ Setting local photo URI")
+            Log.d("SupporterSettingScreen", "✅ Setting local photo URI")
             localPhotoUri = selectedUri
             
             // 画像のハッシュ値を計算（重複チェック用）
-            android.util.Log.d("SupporterSettingScreen", "🔍 Calculating image hash for duplicate detection...")
+            Log.d("SupporterSettingScreen", "🔍 Calculating image hash for duplicate detection...")
             localPhotoHash = calculateImageHash(selectedUri)
-            android.util.Log.d("SupporterSettingScreen", "📝 Image hash: $localPhotoHash")
+            Log.d("SupporterSettingScreen", "📝 Image hash: $localPhotoHash")
             
             onPhotoChange(selectedUri)
         } ?: run {
-            android.util.Log.d("SupporterSettingScreen", "❌ 画像選択がキャンセルされました")
+            Log.d("SupporterSettingScreen", "❌ 画像選択がキャンセルされました")
         }
     }
 
     Column(
         modifier = modifier
-            .fillMaxSize()
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -281,7 +301,7 @@ fun SupporterSettingScreen(
         // 画像選択エリア - 直接タップで選択
         Card(
             onClick = { 
-                android.util.Log.d("SupporterSettingScreen", "🖼️ Image area clicked!")
+                Log.d("SupporterSettingScreen", "🖼️ Image area clicked!")
                 // 画像ファイルを選択（すべての画像形式を許可）
                 imagePickerLauncher.launch("image/*") 
             },
@@ -321,10 +341,10 @@ fun SupporterSettingScreen(
                             .clip(CircleShape),
                         contentScale = ContentScale.Crop,
                         onError = { error ->
-                            android.util.Log.e("SupporterSettingScreen", "❌ 画像読み込みエラー: ${error.result.throwable.message}")
+                            Log.e("SupporterSettingScreen", "❌ 画像読み込みエラー: ${error.result.throwable.message}")
                         },
                         onSuccess = {
-                            android.util.Log.d("SupporterSettingScreen", "✅ 画像読み込み成功: $imageToDisplay")
+                            Log.d("SupporterSettingScreen", "✅ 画像読み込み成功: $imageToDisplay")
                         }
                     )
                 } else {
@@ -463,6 +483,138 @@ fun SupporterSettingScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        var backgroundLocationEnabled by remember { mutableStateOf(false) }
+        val fineLocationPermission = android.Manifest.permission.ACCESS_FINE_LOCATION
+        val backgroundLocationPermission = android.Manifest.permission.ACCESS_BACKGROUND_LOCATION
+
+        fun checkPermissions() {
+            val fineLocationGranted = ContextCompat.checkSelfPermission(context, fineLocationPermission) == PackageManager.PERMISSION_GRANTED
+            val backgroundLocationGranted = ContextCompat.checkSelfPermission(context, backgroundLocationPermission) == PackageManager.PERMISSION_GRANTED
+            backgroundLocationEnabled = fineLocationGranted && backgroundLocationGranted
+            Log.d("SupporterSettingScreen", "Permissions checked: fineLocation=$fineLocationGranted, backgroundLocation=$backgroundLocationGranted")
+        }
+
+        LaunchedEffect(Unit) {
+            checkPermissions()
+        }
+
+        val backgroundLocationLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+            onResult = { isGranted ->
+                backgroundLocationEnabled = isGranted
+                if (isGranted) {
+                    Log.d("SupporterSettingScreen", "Background location permission GRANTED")
+                } else {
+                    Log.e("SupporterSettingScreen", "Background location permission DENIED")
+                }
+            }
+        )
+
+        val fineLocationLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+            onResult = { isGranted ->
+                if (isGranted) {
+                    Log.d("SupporterSettingScreen", "Fine location permission GRANTED, requesting background location...")
+                    backgroundLocationLauncher.launch(backgroundLocationPermission)
+                } else {
+                    Log.e("SupporterSettingScreen", "Fine location permission DENIED")
+                    backgroundLocationEnabled = false
+                }
+            }
+        )
+
+        LaunchedEffect(backgroundLocationEnabled) {
+            val workManager = WorkManager.getInstance(context)
+            if (backgroundLocationEnabled) {
+                Log.d("SupporterSettingScreen", "バックグラウンドでの位置情報が有効になりました。WorkManagerのタスクを開始します。")
+                val constraints = Constraints.Builder()
+                    .setRequiresBatteryNotLow(true)
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+
+                val periodicWorkRequest =
+                    PeriodicWorkRequestBuilder<LocationWorker>(15, TimeUnit.MINUTES)
+                        .setConstraints(constraints)
+                        .build()
+                workManager.enqueueUniquePeriodicWork(
+                    LocationWorker.WORK_NAME,
+                    ExistingPeriodicWorkPolicy.UPDATE, // 既存のタスクがあれば置き換える
+                    periodicWorkRequest
+                )
+                Log.d("SupporterSettingScreen", "WorkManagerのタスク (${LocationWorker.WORK_NAME}) をキューに追加しました。")
+
+                val oneTime = androidx.work.OneTimeWorkRequestBuilder<LocationWorker>()
+                    .setConstraints(constraints)
+                    .build()
+                workManager.enqueue(oneTime)
+                Log.d("SupporterSettingScreen", "Enqueued one-time LocationWorker to run immediately for priming.")
+            } else {
+                Log.d("SupporterSettingScreen", "バックグラウンドでの位置情報が無効になりました。WorkManagerのタスクをキャンセルします。")
+                workManager.cancelUniqueWork(LocationWorker.WORK_NAME)
+                Log.d("SupporterSettingScreen", "WorkManagerのタスク (${LocationWorker.WORK_NAME}) をキャンセルしました。")
+            }
+        }
+
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "バックグラウンドでの位置情報",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Status Indicator
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val statusIcon = if (backgroundLocationEnabled) Icons.Default.Check else Icons.Default.Warning
+                val iconTint = if (backgroundLocationEnabled) Color(0xFF4CAF50) else Color(0xFFFFA000)
+                Icon(imageVector = statusIcon, contentDescription = "Status", tint = iconTint)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (backgroundLocationEnabled) "許可されています" else "許可されていません",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "アプリがバックグラウンドにあるときでも、助けを必要としている人を見つけるために使用されます。この機能を有効にするには、位置情報の権限を「常に許可」に設定する必要があります。",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Action Button
+            Button(
+                onClick = {
+                    if (backgroundLocationEnabled) {
+                        // Open App Settings
+                        Log.d("SupporterSettingScreen", "Opening app settings...")
+                        val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        val uri = Uri.fromParts("package", context.packageName, null)
+                        intent.data = uri
+                        context.startActivity(intent)
+                    } else {
+                        // Request Permissions
+                        Log.d("SupporterSettingScreen", "Requesting background location permission...")
+                        val fineLocationGranted = ContextCompat.checkSelfPermission(context, fineLocationPermission) == PackageManager.PERMISSION_GRANTED
+                        if (fineLocationGranted) {
+                            backgroundLocationLauncher.launch(backgroundLocationPermission)
+                        } else {
+                            fineLocationLauncher.launch(fineLocationPermission)
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (backgroundLocationEnabled) "設定を開く" else "権限を許可する")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -484,78 +636,78 @@ fun SupporterSettingScreen(
             onClick = { 
                 // アップロード中の場合は処理をスキップ
                 if (isLoading) {
-                    android.util.Log.d("SupporterSettingScreen", "⚠️ Upload in progress, ignoring button click")
+                    Log.d("SupporterSettingScreen", "⚠️ Upload in progress, ignoring button click")
                     return@Button
                 }
                 
-                android.util.Log.d("SupporterSettingScreen", "=== 保存ボタン clicked ===")
-                android.util.Log.d("SupporterSettingScreen", "Original nickname (from currentUser): '$originalNickname'")
-                android.util.Log.d("SupporterSettingScreen", "Current local nickname: '$localNickname'")
-                android.util.Log.d("SupporterSettingScreen", "Has nickname changes: $hasNicknameChanges")
-                android.util.Log.d("SupporterSettingScreen", "Has photo changes: $hasPhotoChanges")
-                android.util.Log.d("SupporterSettingScreen", "Local photo URI: $localPhotoUri")
-                android.util.Log.d("SupporterSettingScreen", "Current user: ${currentUser?.email}")
+                Log.d("SupporterSettingScreen", "=== 保存ボタン clicked ===")
+                Log.d("SupporterSettingScreen", "Original nickname (from currentUser): '$originalNickname'")
+                Log.d("SupporterSettingScreen", "Current local nickname: '$localNickname'")
+                Log.d("SupporterSettingScreen", "Has nickname changes: $hasNicknameChanges")
+                Log.d("SupporterSettingScreen", "Has photo changes: $hasPhotoChanges")
+                Log.d("SupporterSettingScreen", "Local photo URI: $localPhotoUri")
+                Log.d("SupporterSettingScreen", "Current user: ${currentUser?.email}")
                 
                 // 変更があるかどうかをチェック
                 if (!hasAnyChanges) {
-                    android.util.Log.d("SupporterSettingScreen", "⚠️ No changes to save")
+                    Log.d("SupporterSettingScreen", "⚠️ No changes to save")
                     return@Button
                 }
                 
-                android.util.Log.d("SupporterSettingScreen", "💾 Starting save process...")
+                Log.d("SupporterSettingScreen", "💾 Starting save process...")
                 
                 // ニックネームの変更があった場合は保存
                 if (hasNicknameChanges) {
-                    android.util.Log.d("SupporterSettingScreen", "📝 Saving nickname: '$localNickname'")
+                    Log.d("SupporterSettingScreen", "📝 Saving nickname: '$localNickname'")
                     userViewModel.updateNickname(localNickname)
                     onEditClick(localNickname)
                 }
                 
                 // 写真の変更があった場合、または画像が未アップロードの場合は保存
                 if (localPhotoUri != null && hasPhotoChanges) {
-                    android.util.Log.d("SupporterSettingScreen", "📸 Saving profile image...")
-                    android.util.Log.d("SupporterSettingScreen", "Photo URI to upload: $localPhotoUri")
-                    android.util.Log.d("SupporterSettingScreen", "Photo hash: $localPhotoHash")
-                    android.util.Log.d("SupporterSettingScreen", "Current user iconUrl: ${currentUser?.iconUrl}")
-                    android.util.Log.d("SupporterSettingScreen", "Reason: New/different image detected by hash comparison")
+                    Log.d("SupporterSettingScreen", "📸 Saving profile image...")
+                    Log.d("SupporterSettingScreen", "Photo URI to upload: $localPhotoUri")
+                    Log.d("SupporterSettingScreen", "Photo hash: $localPhotoHash")
+                    Log.d("SupporterSettingScreen", "Current user iconUrl: ${currentUser?.iconUrl}")
+                    Log.d("SupporterSettingScreen", "Reason: New/different image detected by hash comparison")
                     try {
                         // 画像をアップロードしてiconUrlを取得
-                        android.util.Log.d("SupporterSettingScreen", "🔄 Starting image upload...")
-                        android.util.Log.d("SupporterSettingScreen", "Will replace existing image: ${currentUser?.iconUrl}")
+                        Log.d("SupporterSettingScreen", "🔄 Starting image upload...")
+                        Log.d("SupporterSettingScreen", "Will replace existing image: ${currentUser?.iconUrl}")
                         userViewModel.uploadProfileImage(localPhotoUri!!) { downloadUrl ->
-                            android.util.Log.d("SupporterSettingScreen", "✅ Image uploaded successfully: $downloadUrl")
+                            Log.d("SupporterSettingScreen", "✅ Image uploaded successfully: $downloadUrl")
                             // アップロード成功後、iconUrlをデータベースに保存
                             if (downloadUrl.isNotEmpty()) {
-                                android.util.Log.d("SupporterSettingScreen", "💾 Updating user with new iconUrl...")
-                                android.util.Log.d("SupporterSettingScreen", "Old iconUrl was: ${currentUser?.iconUrl}")
+                                Log.d("SupporterSettingScreen", "💾 Updating user with new iconUrl...")
+                                Log.d("SupporterSettingScreen", "Old iconUrl was: ${currentUser?.iconUrl}")
                                 userViewModel.updateUserIconUrl(downloadUrl)
                                 // 現在のハッシュ値を更新（次回の比較用）
                                 currentPhotoHash = localPhotoHash
-                                android.util.Log.d("SupporterSettingScreen", "🔄 Updated current photo hash for future comparisons")
+                                Log.d("SupporterSettingScreen", "🔄 Updated current photo hash for future comparisons")
                             } else {
-                                android.util.Log.e("SupporterSettingScreen", "❌ Download URL is empty")
+                                Log.e("SupporterSettingScreen", "❌ Download URL is empty")
                             }
                         }
-                        android.util.Log.d("SupporterSettingScreen", "✅ Image upload initiated")
+                        Log.d("SupporterSettingScreen", "✅ Image upload initiated")
                         onPhotoSave(localPhotoUri!!)
                     } catch (e: Exception) {
-                        android.util.Log.e("SupporterSettingScreen", "❌ Error uploading image: ${e.message}", e)
+                        Log.e("SupporterSettingScreen", "❌ Error uploading image: ${e.message}", e)
                     }
                 } else {
-                    if (localPhotoUri != null && !hasPhotoChanges) {
-                        android.util.Log.d("SupporterSettingScreen", "📸 Same image detected - skipping upload")
-                        android.util.Log.d("SupporterSettingScreen", "localPhotoUri: $localPhotoUri")
-                        android.util.Log.d("SupporterSettingScreen", "localPhotoHash: $localPhotoHash")
-                        android.util.Log.d("SupporterSettingScreen", "currentPhotoHash: $currentPhotoHash")
-                        android.util.Log.d("SupporterSettingScreen", "Duplicate upload prevented")
+                    if (localPhotoUri != null) {
+                        Log.d("SupporterSettingScreen", "📸 Same image detected - skipping upload")
+                        Log.d("SupporterSettingScreen", "localPhotoUri: $localPhotoUri")
+                        Log.d("SupporterSettingScreen", "localPhotoHash: $localPhotoHash")
+                        Log.d("SupporterSettingScreen", "currentPhotoHash: $currentPhotoHash")
+                        Log.d("SupporterSettingScreen", "Duplicate upload prevented")
                     } else {
-                        android.util.Log.d("SupporterSettingScreen", "📸 No photo to save")
-                        android.util.Log.d("SupporterSettingScreen", "localPhotoUri: $localPhotoUri")
-                        android.util.Log.d("SupporterSettingScreen", "hasPhotoChanges: $hasPhotoChanges")
+                        Log.d("SupporterSettingScreen", "📸 No photo to save")
+                        Log.d("SupporterSettingScreen", "localPhotoUri: $localPhotoUri")
+                        Log.d("SupporterSettingScreen", "hasPhotoChanges: $hasPhotoChanges")
                     }
                 }
                 
-                android.util.Log.d("SupporterSettingScreen", "✅ Save process completed")
+                Log.d("SupporterSettingScreen", "✅ Save process completed")
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
@@ -609,6 +761,56 @@ fun SupporterSettingScreen(
                     color = Color(0xFFD32F2F),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+        
+        // サインアウトボタン
+        Spacer(modifier = Modifier.height(32.dp))
+        OutlinedButton(
+            onClick = {
+                if (isSigningOut) {
+                    Log.d("SupporterSettingScreen", "Sign out already in progress, ignoring click")
+                    return@OutlinedButton
+                }
+                
+                Log.d("SupporterSettingScreen", "Sign out button clicked")
+                isSigningOut = true
+                
+                // デバイス削除を先に実行してから、完了後にサインアウト
+                deviceViewModel.callDeleteDevice {
+                    Log.d("SupporterSettingScreen", "Device deletion completed")
+                    userViewModel.signOut()
+                    onSignOut()
+                    // 処理完了後にフラグをリセット（念のため）
+                    isSigningOut = false
+                }
+            },
+            enabled = !isSigningOut,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = Color(0xFFD32F2F)
+            ),
+            border = BorderStroke(1.dp, Color(0xFFD32F2F)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            if (isSigningOut) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = Color(0xFFD32F2F),
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "サインアウト中...",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            } else {
+                Text(
+                    text = "サインアウト",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
