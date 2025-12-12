@@ -29,18 +29,22 @@ import com.example.helpsync.viewmodel.UserViewModel
 import com.google.android.gms.location.CurrentLocationRequest
 import com.google.android.gms.location.FusedLocationProviderClient
 import org.json.JSONObject
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
 @SuppressLint("NewApi")
 @Composable
 fun HelpMarkHolderHomeScreen(
     userViewModel: UserViewModel,
     onMatchingStarted: () -> Unit,
+    onMatchingEstablished: (String) -> Unit,
     helpMarkHolderViewModel : HelpMarkHolderViewModel,
     locationClient: FusedLocationProviderClient
 ) {
     val context = LocalContext.current
 
     val helpRequest by userViewModel.activeHelpRequest.collectAsState()
+    val supporterProfile by userViewModel.supporterProfile.collectAsState()
     val isLoading by remember { derivedStateOf { userViewModel.isLoading } }
     val bleRequestUuid by helpMarkHolderViewModel.bleRequestUuid.collectAsState()
 
@@ -52,6 +56,15 @@ fun HelpMarkHolderHomeScreen(
         val allGranted = perms.entries.all { it.value }
         if (!allGranted) {
             Toast.makeText(context, "支援の要請には権限が必要です。", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    LaunchedEffect(helpRequest, supporterProfile) {
+        // ステータスが進行中(ACCEPTED等)になり、かつサポーター情報が取得できたら遷移
+        if (helpRequest?.matchedSupporterId != null && supporterProfile != null) {
+            // ここで「マッチング成立画面」へ遷移する処理を呼ぶ
+            Log.d("HomeScreen", "マッチング成立！サポーター: ${supporterProfile?.nickname}")
+            onMatchingEstablished(helpRequest!!.id)
         }
     }
 
@@ -92,6 +105,11 @@ fun HelpMarkHolderHomeScreen(
             val rawData = result["data"]
             val data = JSONObject(rawData)
             val uuid = data.getString("proximityVerificationId")
+            if (data.has("id")) {
+                val newRequestId = data.getString("id")
+                Log.d("HOLDER_BLE", "リクエスト作成成功 ID: $newRequestId -> 監視開始")
+                userViewModel.startMonitoringRequest(newRequestId)
+            }
             if(uuid == null){
                 Log.e("HOLDER_BLE", "UUID is null")
                 return@let
@@ -191,6 +209,7 @@ fun HelpMarkHolderHomeScreen(
 
                                     Log.d("LocationClient", "Location acquired: $lat, $lon")
                                     helpMarkHolderViewModel.callCreateHelpRequest(lat, lon)
+                                    onMatchingStarted()
                                 }
                         }
 
