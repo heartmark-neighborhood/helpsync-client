@@ -52,11 +52,22 @@ class HelpMarkHolderViewModel(
 
     fun callCreateHelpRequest(latitude: Double, longitude: Double) {
         viewModelScope.launch {
+            // 1. DeviceIdを安全に取得する
             val deviceId = try {
                 cloudMessageRepository.getDeviceId()
             } catch(e: Exception) {
-                Log.d("Error", "deviceIdの取得に失敗しました")
+                Log.e("HelpMarkHolderViewModel", "DeviceId取得エラー: ${e.message}")
+                null
             }
+
+            // 2. DeviceIdが取れなかったらここで中断する（サーバーに送らない）
+            if (deviceId.isNullOrBlank()) {
+                Log.e("HelpMarkHolderViewModel", "DeviceIdが無いためリクエストを中止します。")
+                // 必要であればここで画面にエラーメッセージを表示する処理を追加
+                return@launch
+            }
+
+            // 3. DeviceIdがある場合のみ実行
             try {
                 val functions = Firebase.functions("asia-northeast2")
                 val locationMap = hashMapOf(
@@ -68,16 +79,23 @@ class HelpMarkHolderViewModel(
                     "location" to locationMap
                 )
 
+                Log.d("HelpMarkHolderViewModel", "Creating help request with deviceId: $deviceId")
+
                 val callResult = functions.getHttpsCallable("createHelpRequest").call(data).await()
 
                 val responseData = callResult.data as? Map<String, Any>
-                val status = responseData?.get("status") as? String
+                val status = responseData?.get("status") as? String // statusフィールドがあるかサーバーの戻り値次第ですが
                 val helpRequestIdResult = responseData?.get("helpRequestId") as? String
-                if(status != null) cloudMessageRepository.saveHelpRequestId(helpRequestIdResult)
+
+                // 成功したらIDを保存
+                if (helpRequestIdResult != null) {
+                    cloudMessageRepository.saveHelpRequestId(helpRequestIdResult)
+                    Log.d("HelpMarkHolderViewModel", "Success: Request ID $helpRequestIdResult")
+                }
 
             } catch(e: Exception){
-                Log.d("Error", "createHelpRequestの呼びだしに失敗しました")
-                Log.d("Error", "エラーメッセージ ${e.message}")
+                Log.e("HelpMarkHolderViewModel", "createHelpRequestの呼びだしに失敗しました")
+                Log.e("HelpMarkHolderViewModel", "エラーメッセージ ${e.message}")
             }
         }
     }

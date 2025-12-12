@@ -7,6 +7,8 @@ import java.util.Date
 enum class RequestStatus {
     PENDING,  // サポーターを探している最中
     MATCHED,  // サポーターが見つかった
+    FAILED,
+    EXPIRED,
     COMPLETED, // 支援完了
     CANCELED  // キャンセルされた
 }
