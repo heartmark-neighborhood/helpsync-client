@@ -22,6 +22,8 @@ interface CloudMessageRepository {
     suspend fun saveHelpRequestId(helpRequestId: String?)
     suspend fun callRenewDeviceToken(token: String)
     suspend fun deleteDevice()
+
+    suspend fun callRegisterNewDevice(token: String)
 }
 
 class CloudMessageRepositoryImpl (
@@ -99,5 +101,21 @@ class CloudMessageRepositoryImpl (
 
     override suspend fun saveHelpRequestId(helpRequestId: String?) {
         helpRequestIdDataSource.saveHelpRequestId(helpRequestId)
+    }
+
+    override suspend fun callRegisterNewDevice(token: String) {
+        try {
+            val functions = Firebase.functions("asia-northeast2")
+            // サーバー側が期待するパラメータ名に合わせて送信
+            // (通常は deviceToken や id などを送ります)
+            val data = hashMapOf(
+                "deviceToken" to token
+            )
+            functions.getHttpsCallable("registerNewDevice").call(data).await()
+            Log.d("CloudMessageRepo", "Device registered to server successfully")
+        } catch (e: Exception) {
+            Log.e("CloudMessageRepo", "Failed to register device: ${e.message}")
+            // 登録済みエラーなどの場合は無視して良い場合もあるが、一旦ログに出す
+        }
     }
 }
