@@ -4,6 +4,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -27,9 +28,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.androidx.compose.koinViewModel
 import coil.compose.AsyncImage
 import com.example.helpsync.viewmodel.UserViewModel
+import com.example.helpsync.viewmodel.DeviceManagementVewModel
 import java.security.MessageDigest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,7 +45,9 @@ fun SettingsScreen(
     onBackClick: () -> Unit = {},
     onCompleteClick: () -> Unit = {},
     onPhotoSave: (Uri) -> Unit = {},
-    userViewModel: UserViewModel = viewModel()
+    userViewModel: UserViewModel = koinViewModel(),
+    deviceViewModel: DeviceManagementVewModel = koinViewModel(),
+    onSignOut: () -> Unit = {}
 ) {
     // ローカルで状態を管理
     var localNickname by remember(nickname) { mutableStateOf(nickname) }
@@ -455,6 +459,29 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFFFF5722),
                     textAlign = TextAlign.Center
+                )
+            }
+            
+            // サインアウトボタン
+            Spacer(modifier = Modifier.height(32.dp))
+            OutlinedButton(
+                onClick = {
+                    Log.d("SettingsScreen", "Sign out button clicked")
+                    deviceViewModel.callDeleteDevice()
+                    userViewModel.signOut()
+                    onSignOut()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = Color(0xFFD32F2F)
+                ),
+                border = BorderStroke(1.dp, Color(0xFFD32F2F)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "サインアウト",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
