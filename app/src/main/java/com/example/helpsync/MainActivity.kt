@@ -455,6 +455,126 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+
+
+                        // RequestAcceptanceScreen と RequestDetail の定義は MainScreen.kt に移動したため、
+                        // このファイルからは削除されています。
+
+                        composable(AppScreen.HelpMarkHolderHome.name) {
+                            HelpMarkHolderHomeScreen(
+                                userViewModel = userViewModel,
+                                onMatchingStarted = {
+                                    navController.navigate(AppScreen.HelpMarkHolderMatching.name)
+                                },
+                                helpMarkHolderViewModel = helpMarkHolderViewModel,
+                                locationClient = fusedLocationClient
+                            )
+                        }
+
+                        composable(AppScreen.HelpMarkHolderProfile.name) {
+                            HelpMarkHolderProfileScreen(
+                                onBackClick = {
+                                    navController.popBackStack()
+                                },
+                                onCompleteClick = {
+                                    navController.navigate(AppScreen.HelpMarkHolderScreen.name) {
+                                        popUpTo(AppScreen.RoleSelection.name) { inclusive = false }
+                                    }
+                                },
+                                onSignOut = {
+                                    hasNavigatedOnStartup = false
+                                    navController.navigate(AppScreen.SignIn.name) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        composable(AppScreen.HelpMarkHolderMatching.name) {
+                            HelpMarkHolderMatchingScreen(
+                                requestId = userViewModel.activeHelpRequest.value?.id ?: "",
+                                viewModel = userViewModel,
+                                onMatchingComplete = { completedRequestId ->
+                                    val dummySupporter = SupporterInfo(
+                                        id = "dummy123",
+                                        nickname = "やさしい人",
+                                        iconUrl = "https://example.com/dummy-profile.jpg"
+                                    )
+                                    val navInfo = SupporterNavInfo(
+                                        requestId = completedRequestId,
+                                        supporterInfo = dummySupporter
+                                    )
+                                    val infoJson = Json.encodeToString(navInfo)
+                                    val encodedJson = URLEncoder.encode(infoJson, "UTF-8")
+                                    navController.navigate("${AppScreen.HelpMarkHolderMatchingComplete.name}/$encodedJson") {
+                                        popUpTo(AppScreen.HelpMarkHolderMatching.name) { inclusive = true }
+                                    }
+                                },
+                                onCancel = {
+                                    navController.navigate(AppScreen.HelpMarkHolderHome.name) {
+                                        popUpTo(AppScreen.HelpMarkHolderMatching.name) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        composable(
+                            route = "${AppScreen.HelpMarkHolderMatchingComplete.name}/{supporterInfo}",
+                            arguments = listOf(
+                                navArgument("supporterInfo") { type = NavType.StringType }
+                            )
+                        ) { backStackEntry ->
+                            val supporterInfoJson = backStackEntry.arguments?.getString("supporterInfo")
+
+                            val navInfo = remember {
+                                supporterInfoJson?.let {
+                                    try {
+                                        val decodedJson = URLDecoder.decode(it, "UTF-8")
+                                        Json.decodeFromString<SupporterNavInfo>(decodedJson)
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "Failed to decode supporterInfo JSON: ${e.message}")
+                                        null
+                                    }
+                                }
+                            }
+
+                            HelpMarkHolderMatchingCompleteScreen(
+                                requestId = navInfo?.requestId ?: "",
+                                userViewModel = userViewModel,
+                                helpMarkHolderViewModel = helpMarkHolderViewModel,
+                                onHomeClick = {
+                                    navController.navigate(AppScreen.HelpMarkHolderHome.name) {
+                                        popUpTo(AppScreen.HelpMarkHolderMatchingComplete.name) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        composable(
+                            route = "HelpRequestDetailScreen/{supporterInformation}",
+                            arguments = listOf(navArgument("supporterInformation") { type = NavType.StringType }),
+                            // 通知からのディープリンクを定義
+                            deepLinks = listOf(navDeepLink {
+                                uriPattern = "app://helpsync/HelpRequestDetailScreen/{supporterInformation}"
+                                action = "ACTION_SHOW_ACCEPTANCE_SCREEN" // Intent Actionと一致させる
+                            })
+                        ) { backStackEntry ->
+                                val supporterInformation = backStackEntry.arguments?.getString("supporterInformation")
+                                AcceptanceScreen(supporterInformation = supporterInformation ?: "")
+                        }
+
+                        composable(AppScreen.Settings.name) {
+                            SettingsScreen(
+                                onBackClick = {
+                                    navController.popBackStack()
+                                },
+                                onCompleteClick = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+
+
                         composable(AppScreen.HelpMarkHolderProfileFromSettings.name) {
                             HelpMarkHolderProfileScreen(
                                 onBackClick = {
