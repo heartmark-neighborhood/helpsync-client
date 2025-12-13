@@ -100,7 +100,6 @@ class UserViewModel : ViewModel() {
         }
     }
 
-<<<<<<< HEAD
     // Firestoreのリスナーを保持するための変数
     private var requestListener: ListenerRegistration? = null
     // ▲▲▲ ここまで新規追加 ▲▲▲
@@ -126,8 +125,6 @@ class UserViewModel : ViewModel() {
         }
     }
 
-=======
->>>>>>> 53a509a (サポーターの情報表示)
     fun signUp(email: String, password: String, nickname: String = "", role: String = "", physicalFeatures: String = "") {
         viewModelScope.launch {
             Log.d(TAG, "Starting signUp process")
@@ -178,8 +175,7 @@ class UserViewModel : ViewModel() {
             userRepository.signIn(email, password)
                 .onSuccess { firebaseUser ->
                     Log.d(TAG, "✅ SignIn successful for user: ${firebaseUser.uid}")
-<<<<<<< HEAD
-=======
+
                     try {
                         val token = FirebaseMessaging.getInstance().token.await()
                         Log.d(TAG, "Registering device to server with token: $token")
@@ -189,7 +185,6 @@ class UserViewModel : ViewModel() {
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to save Device ID", e)
                     }
->>>>>>> 53a509a (サポーターの情報表示)
                     isSignedIn = true
                     loadUserData(firebaseUser.uid)
                 }
@@ -204,12 +199,6 @@ class UserViewModel : ViewModel() {
 
     fun signOut() {
         Log.d(TAG, "SignOut requested")
-<<<<<<< HEAD
-        userRepository.signOut()
-        isSignedIn = false
-        currentUser = null
-        Log.d(TAG, "✅ SignOut completed")
-=======
         viewModelScope.launch {
             try {
                 cloudMessageRepository.deleteDevice()
@@ -229,7 +218,6 @@ class UserViewModel : ViewModel() {
                 Log.d(TAG, "✅ SignOut completed")
             }
         }
->>>>>>> 53a509a (サポーターの情報表示)
     }
 
     private fun loadUserData(uid: String) {
