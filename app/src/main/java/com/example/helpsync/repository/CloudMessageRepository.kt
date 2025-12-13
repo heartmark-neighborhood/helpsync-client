@@ -27,13 +27,9 @@ interface CloudMessageRepository {
     suspend fun getHelpRequestId() : String?
     suspend fun saveHelpRequestId(helpRequestId: String?)
     suspend fun callRenewDeviceToken(token: String)
-<<<<<<< HEAD
     suspend fun callHandleProximityVerificationResultBackGround(scanResult: Boolean)
-=======
     suspend fun deleteDevice()
-
     suspend fun callRegisterNewDevice(token: String)
->>>>>>> 53a509a (サポーターの情報表示)
 }
 
 class CloudMessageRepositoryImpl (
