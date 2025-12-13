@@ -543,6 +543,31 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+
+                        composable(
+                            route = "HelpRequestDetailScreen/{supporterInformation}",
+                            arguments = listOf(navArgument("supporterInformation") { type = NavType.StringType }),
+                            // 通知からのディープリンクを定義
+                            deepLinks = listOf(navDeepLink {
+                                uriPattern = "app://helpsync/HelpRequestDetailScreen/{supporterInformation}"
+                                action = "ACTION_SHOW_ACCEPTANCE_SCREEN" // Intent Actionと一致させる
+                            })
+                        ) { backStackEntry ->
+                                val supporterInformation = backStackEntry.arguments?.getString("supporterInformation")
+                                AcceptanceScreen(supporterInformation = supporterInformation ?: "")
+                        }
+
+                        composable(AppScreen.Settings.name) {
+                            SettingsScreen(
+                                onBackClick = {
+                                    navController.popBackStack()
+                                },
+                                onCompleteClick = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+
                         composable(AppScreen.HelpMarkHolderProfileFromSettings.name) {
                             HelpMarkHolderProfileScreen(
                                 onBackClick = {
