@@ -1,5 +1,6 @@
 package com.example.helpsync
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
@@ -25,13 +26,14 @@ enum class HelpMarkHolderScreenTab(
     Home(Icons.Outlined.Home, "ホーム", "holder/home"),
     Profile(Icons.Outlined.Person, "プロフィール", "holder/profile")
 }
-
+@SuppressLint("NewApi")
 @Composable
 fun HelpMarkHolderScreen(
     mainNavController: NavHostController, // MainActivityのNavController
     userViewModel: UserViewModel,
     locationClient: FusedLocationProviderClient,
-    onSignOut: () -> Unit = {}
+    onSignOut: () -> Unit = {},
+    onMatchingEstablished: (String) -> Unit
 ) {
     // タブ内ナビゲーション用のNavController
     val tabNavController = rememberNavController()
@@ -69,10 +71,11 @@ fun HelpMarkHolderScreen(
                 HelpMarkHolderHomeScreen(
                     userViewModel = userViewModel,
                     onMatchingStarted = {
-                        mainNavController.navigate("HelpMarkHolderMatching") // ルート名を文字列で指定
+                        mainNavController.navigate("${AppScreen.HelpMarkHolderMatching.name}/pending")
                     },
                     helpMarkHolderViewModel = koinViewModel(),
-                    locationClient = locationClient
+                    locationClient = locationClient,
+                    onMatchingEstablished = onMatchingEstablished
                 )
             }
             composable(HelpMarkHolderScreenTab.Profile.route) {

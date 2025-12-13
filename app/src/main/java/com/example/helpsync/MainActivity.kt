@@ -310,6 +310,10 @@ class MainActivity : ComponentActivity() {
                                 locationClient = fusedLocationClient,
                                 onSignOut = {
                                     hasNavigatedOnStartup = false
+                                },
+                                onMatchingEstablished = {requestId ->
+                                    // 受け取ったIDを使って完了画面へ遷移
+                                    navController.navigate("${AppScreen.HelpMarkHolderMatchingComplete.name}/$requestId")
                                 }
                             )
                         }
@@ -322,6 +326,7 @@ class MainActivity : ComponentActivity() {
                             HelpMarkHolderMatchingScreen(
                                 requestId = requestId,
                                 viewModel = userViewModel,
+                                helpMarkHolderViewModel = helpMarkHolderViewModel,
                                 onMatchingComplete = { completedRequestId ->
                                     navController.navigate("${AppScreen.HelpMarkHolderMatchingComplete.name}/$completedRequestId") {
                                         popUpTo(AppScreen.HelpMarkHolderMatching.name) { inclusive = true }
@@ -451,6 +456,7 @@ class MainActivity : ComponentActivity() {
                         }
 
 
+
                         // RequestAcceptanceScreen と RequestDetail の定義は MainScreen.kt に移動したため、
                         // このファイルからは削除されています。
 
@@ -567,6 +573,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+
 
                         composable(AppScreen.HelpMarkHolderProfileFromSettings.name) {
                             HelpMarkHolderProfileScreen(
