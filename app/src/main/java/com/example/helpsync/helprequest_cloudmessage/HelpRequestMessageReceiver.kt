@@ -75,6 +75,7 @@ class HelpRequestMessageReceiver : FirebaseMessagingService(), KoinComponent{
 
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setContentTitle("ヘルプ要請を受信しました")
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentText("近くで助けを求めている人が居ます。")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
