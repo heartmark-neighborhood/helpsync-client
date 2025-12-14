@@ -59,7 +59,7 @@ class HelpRequestMessageReceiver : FirebaseMessagingService(), KoinComponent{
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun sendNotification(data: JSONObject) {
-        val channelId = "help_request_notifictaion_channel"
+        val channelId = "help_request_notification_channel"
         val notificationId = 23
 
         val intent = Intent(this, MainActivity::class.java).apply {
