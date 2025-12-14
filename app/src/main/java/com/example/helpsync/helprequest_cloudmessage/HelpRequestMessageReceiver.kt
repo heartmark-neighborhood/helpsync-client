@@ -59,7 +59,7 @@ class HelpRequestMessageReceiver : FirebaseMessagingService(), KoinComponent{
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun sendNotification(data: JSONObject) {
-        val channelId = "help_request_notifictaion_channel"
+        val channelId = "help_request_notification_channel"
         val notificationId = 23
 
         val intent = Intent(this, MainActivity::class.java).apply {
@@ -75,6 +75,7 @@ class HelpRequestMessageReceiver : FirebaseMessagingService(), KoinComponent{
 
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setContentTitle("ヘルプ要請を受信しました")
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentText("近くで助けを求めている人が居ます。")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
