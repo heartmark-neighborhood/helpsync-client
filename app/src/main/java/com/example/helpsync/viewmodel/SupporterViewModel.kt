@@ -100,9 +100,9 @@ class SupporterViewModel(
                 )
                 Log.d("SupporterViewModel", "callHandleProximityVerificationResult: scanResult=$scanResult, helpRequestId=${helpRequestId}, userId=$uid")
                 Log.d("SupporterViewModel", "Calling Cloud Function: handleProximityVerificationResult with data=$data")
-                
+
                 val callResult = functions.getHttpsCallable("handleProximityVerificationResult").call(data).await()
-                
+
                 Log.d("SupporterViewModel", "Cloud Function call successful: result=${callResult.data}")
             } catch(e: Exception){
                 Log.e("SupporterViewModel", "Failed to call handleProximityVerificationResult", e)
