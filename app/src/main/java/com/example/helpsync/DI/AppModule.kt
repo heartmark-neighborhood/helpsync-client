@@ -40,7 +40,7 @@ val appModule = module {
     single<CloudMessageRepository> { CloudMessageRepositoryImpl(get(), get()) }
 
 
-    factory {
+    single {
         HelpMarkHolderViewModel(
             cloudMessageRepository = get()
         )
@@ -55,7 +55,7 @@ val appModule = module {
             cloudMessageRepository = get()
         )
     }
-    factory { UserViewModel() }
+    single { UserViewModel(cloudMessageRepository = get()) }
 
     worker {
         LocationWorker(

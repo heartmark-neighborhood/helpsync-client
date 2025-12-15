@@ -13,6 +13,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.example.helpsync.help_mark_holder_home_screen.HelpMarkHolderHomeScreen
 import com.example.helpsync.help_mark_holder_profile_screen.HelpMarkHolderProfileScreen
+import com.example.helpsync.viewmodel.HelpMarkHolderViewModel
 import com.example.helpsync.viewmodel.UserViewModel
 import com.google.android.gms.location.FusedLocationProviderClient
 import org.koin.androidx.compose.koinViewModel
@@ -31,6 +32,7 @@ enum class HelpMarkHolderScreenTab(
 fun HelpMarkHolderScreen(
     mainNavController: NavHostController, // MainActivityのNavController
     userViewModel: UserViewModel,
+    helpMarkHolderViewModel: HelpMarkHolderViewModel,
     locationClient: FusedLocationProviderClient,
     onSignOut: () -> Unit = {},
     onMatchingEstablished: (String) -> Unit

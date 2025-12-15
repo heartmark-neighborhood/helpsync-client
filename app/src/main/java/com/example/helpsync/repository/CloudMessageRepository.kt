@@ -122,6 +122,16 @@ class CloudMessageRepositoryImpl (
     override suspend fun saveDeviceId(deviceId: String?) {
         deviceIdDataSource.saveDeviceId(deviceId)
     }
+    override suspend fun deleteDevice() {
+        try {
+            val functions = Firebase.functions("asia-northeast2") // または Firebase.functions()
+            // ローカルのIDを消去
+            deviceIdDataSource.saveDeviceId(null)
+            Log.d("CloudMessageRepo", "Device ID deleted locally")
+        } catch (e: Exception) {
+            Log.e("CloudMessageRepo", "Failed to delete device: ${e.message}")
+        }
+    }
 
     override suspend fun getHelpRequestId(): String? {
         return helpRequestIdDataSource.getHelpRequestId()

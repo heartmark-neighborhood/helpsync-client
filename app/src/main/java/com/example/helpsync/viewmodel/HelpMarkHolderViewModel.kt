@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.helpsync.SupporterInfo
+import com.example.helpsync.SupporterNavInfo
 import com.example.helpsync.repository.CloudMessageRepository
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.functions.ktx.functions
@@ -11,6 +13,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import org.json.JSONObject
+import java.net.URLEncoder
 
 class HelpMarkHolderViewModel(
     private val cloudMessageRepository: CloudMessageRepository
@@ -20,6 +26,13 @@ class HelpMarkHolderViewModel(
 
     private val _helpRequestJson: MutableStateFlow<Map<String, String>?> = MutableStateFlow(null)
     val helpRequestJson: StateFlow<Map<String, String>?> = _helpRequestJson
+
+    private val _createdHelpRequestId = MutableStateFlow<String?>(null)
+    val createdHelpRequestId: StateFlow<String?> = _createdHelpRequestId
+
+    private val _matchedSupporterNavInfo = MutableStateFlow<com.example.helpsync.SupporterInfo?>(null)
+    val matchedSupporterNavInfo: StateFlow<com.example.helpsync.SupporterInfo?> = _matchedSupporterNavInfo
+
 
     init {
         viewModelScope.launch {
@@ -37,15 +50,57 @@ class HelpMarkHolderViewModel(
         }
     }
 
-    fun handleFCMData(data: Map<String, String>)
-    {
-        when(data["type"]) {
+    private fun handleFCMData(data: Map<String, String>) {
+        Log.d("HelpMarkHolderViewModel", "FCM Data received: $data")
+        when (data["type"]) {
             "proximity-verification" -> {
                 _bleRequestUuid.value = data
-
             }
             "help-request" -> {
                 _helpRequestJson.value = data
+
+                val rawData = data["data"]
+                if (!rawData.isNullOrEmpty()) {
+                    try {
+                        val json = JSONObject(rawData)
+                        if (json.has("candidates")) {
+                            val candidates = json.getJSONArray("candidates")
+                            if (candidates.length() > 0) {
+                                // 1人目の候補者を「マッチング相手」として採用
+                                val supporterJson = candidates.getJSONObject(0)
+
+                                // IDの解析 (ログ形式に対応: id: { value: "..." } または id: "..." )
+                                val idObj = supporterJson.optJSONObject("id")
+                                val supporterId = idObj?.optString("value") ?: supporterJson.optString("id")
+
+                                val nickname = supporterJson.optString("nickname", "サポーター")
+                                val iconUrl = supporterJson.optString("iconUrl", "")
+
+                                // 画面遷移用のデータを作成
+                                val supporterInfo = SupporterInfo(
+                                    id = supporterId,
+                                    nickname = nickname,
+                                    iconUrl = iconUrl
+                                )
+                                // リクエストIDは現在保持しているものを使用
+                                val currentRequestId = _createdHelpRequestId.value ?: ""
+                                val navInfo = SupporterNavInfo(
+                                    requestId = currentRequestId,
+                                    supporterInfo = supporterInfo
+                                )
+
+                                // JSON文字列化してURLエンコード（画面遷移引数用）
+                                val infoJson = Json.encodeToString(navInfo)
+                                val encodedJson = URLEncoder.encode(infoJson, "UTF-8")
+
+                                Log.d("HelpMarkHolderViewModel", "Candidates found! Object updated.")
+                                _matchedSupporterNavInfo.value = supporterInfo
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("HelpMarkHolderViewModel", "JSON parse error", e)
+                    }
+                }
             }
         }
     }
@@ -91,6 +146,8 @@ class HelpMarkHolderViewModel(
                 if (helpRequestIdResult != null) {
                     cloudMessageRepository.saveHelpRequestId(helpRequestIdResult)
                     Log.d("HelpMarkHolderViewModel", "Success: Request ID $helpRequestIdResult")
+
+                    _createdHelpRequestId.value = helpRequestIdResult
                 }
 
             } catch(e: Exception){
@@ -165,4 +222,12 @@ class HelpMarkHolderViewModel(
 
         }
     }
+    fun consumeMatchedSupporterInfo() {
+        _matchedSupporterNavInfo.value = null
+    }
+
+    fun consumeHelpRequestId() {
+        _createdHelpRequestId.value = null
+    }
+
 }

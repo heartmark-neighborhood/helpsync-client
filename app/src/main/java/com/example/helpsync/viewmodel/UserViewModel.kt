@@ -16,8 +16,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.Date
+import com.example.helpsync.repository.CloudMessageRepository
+import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.tasks.await
+import org.json.JSONObject
 
-class UserViewModel : ViewModel() {
+class UserViewModel(
+    private val cloudMessageRepository: CloudMessageRepository
+) : ViewModel() {
+
     private val userRepository = UserRepository()
 
     companion object {
@@ -39,30 +46,27 @@ class UserViewModel : ViewModel() {
     var isSignedIn by mutableStateOf(false)
         private set
 
-    // ▼▼▼ ここから下の3つを新規追加 ▼▼▼
+    private val _temporaryFcmSupporterInfo = MutableStateFlow<com.example.helpsync.SupporterInfo?>(null)
+    val temporaryFcmSupporterInfo = _temporaryFcmSupporterInfo.asStateFlow()
+
     private val _activeHelpRequest = MutableStateFlow<HelpRequest?>(null)
     val activeHelpRequest = _activeHelpRequest.asStateFlow()
 
     private val _pendingHelpRequests = MutableStateFlow<List<HelpRequest>>(emptyList())
     val pendingHelpRequests = _pendingHelpRequests.asStateFlow()
 
-    // サポーターが見つけたリクエストの詳細を保持するStateFlow
     private val _viewedHelpRequest = MutableStateFlow<HelpRequest?>(null)
     val viewedHelpRequest = _viewedHelpRequest.asStateFlow()
 
-    // マッチングしたリクエストの詳細
     private val _matchedRequestDetails = MutableStateFlow<HelpRequest?>(null)
     val matchedRequestDetails = _matchedRequestDetails.asStateFlow()
 
-    // リクエスター（助けを求めた人）のプロフィール情報
     private val _requesterProfile = MutableStateFlow<User?>(null)
     val requesterProfile = _requesterProfile.asStateFlow()
 
-    // サポーター（支援者）のプロフィール情報
     private val _supporterProfile = MutableStateFlow<User?>(null)
     val supporterProfile = _supporterProfile.asStateFlow()
 
-    // Firestoreのリスナーを保持するための変数
     private var requestListener: ListenerRegistration? = null
 
     init {
@@ -81,11 +85,59 @@ class UserViewModel : ViewModel() {
             isSignedIn = false
             currentUser = null
         }
+
+        // ▼▼▼ 追加: FCMメッセージを監視してサポーター情報をキャッチする ▼▼▼
+        viewModelScope.launch {
+            cloudMessageRepository.helpRequestMessageFlow
+                .collect { data ->
+                    handleFCMData(data)
+                }
+        }
+        // ▲▲▲ 追加ここまで ▲▲▲
     }
 
-    /**
-     * PENDING状態のヘルプリクエスト一覧を取得してStateFlowを更新する
-     */
+    private fun handleFCMData(data: Map<String, String>) {
+        if (data["type"] == "help-request") {
+            val rawData = data["data"]
+            if (!rawData.isNullOrEmpty()) {
+                try {
+                    val json = JSONObject(rawData)
+                    if (json.has("candidates")) {
+                        val candidates = json.getJSONArray("candidates")
+
+                        // 候補者が1人以上いる場合のみ処理する
+                        if (candidates.length() > 0) {
+                            val supporterJson = candidates.getJSONObject(0)
+
+                            // IDの解析
+                            val idObj = supporterJson.optJSONObject("id")
+                            val supporterId = idObj?.optString("value") ?: supporterJson.optString("id")
+
+                            val nickname = supporterJson.optString("nickname", "サポーター")
+                            val iconUrl = supporterJson.optString("iconUrl", "")
+
+                            val supporterInfo = com.example.helpsync.SupporterInfo(
+                                id = supporterId,
+                                nickname = nickname,
+                                iconUrl = iconUrl
+                            )
+
+                            Log.d(TAG, "本物のサポーターを検知しました: ${supporterInfo.nickname}")
+
+                            // ここで値をセットして MainActivity に通知
+                            _temporaryFcmSupporterInfo.value = supporterInfo
+                        } else {
+                            Log.d(TAG, "候補者リストは空でした (0人)")
+                            // ここでは何もしない（画面遷移しない）
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "JSON parse error", e)
+                }
+            }
+        }
+    }
+
     fun fetchPendingHelpRequests() {
         viewModelScope.launch {
             isLoading = true
@@ -97,31 +149,6 @@ class UserViewModel : ViewModel() {
                     errorMessage = "リクエスト一覧の取得に失敗: ${error.message}"
                 }
             isLoading = false
-        }
-    }
-
-    // Firestoreのリスナーを保持するための変数
-    private var requestListener: ListenerRegistration? = null
-    // ▲▲▲ ここまで新規追加 ▲▲▲
-
-    init {
-        Log.d(TAG, "=== UserViewModel Init ===")
-        
-        // ログイン状態を保持するため、自動サインアウトを完全に削除
-        Log.d(TAG, "Preserving auth state on app startup")
-        
-        // 現在の認証状態をチェック
-        val currentFirebaseUser = userRepository.getCurrentUser()
-        if (currentFirebaseUser != null) {
-            Log.d(TAG, "Found existing authenticated user: ${currentFirebaseUser.uid}")
-            isSignedIn = true
-            viewModelScope.launch {
-                loadUserData(currentFirebaseUser.uid)
-            }
-        } else {
-            Log.d(TAG, "No authenticated user found")
-            isSignedIn = false
-            currentUser = null
         }
     }
 
@@ -267,9 +294,6 @@ class UserViewModel : ViewModel() {
         }
     }
 
-    // 省略されていたupdateNicknameなども含めますが、長くなるので既存のままでOKな部分は省略しません。
-    // 以下は重要な修正を含む部分です。
-
     fun updateNickname(nickname: String) {
         currentUser?.let { user ->
             val updatedUser = user.copy(nickname = nickname)
@@ -393,8 +417,6 @@ class UserViewModel : ViewModel() {
 
     fun getCurrentFirebaseUser() = userRepository.getCurrentUser()
 
-    // --- ここから下が重要修正部分です ---
-
     fun createHelpRequest() {
         viewModelScope.launch {
             val user = currentUser ?: return@launch
@@ -404,7 +426,6 @@ class UserViewModel : ViewModel() {
             userRepository.createHelpRequest(uid, user.nickname)
                 .onSuccess { newRequest ->
                     _activeHelpRequest.value = newRequest
-                    // リアルタイムでリクエストの更新を監視開始
                     listenForRequestUpdates(newRequest.id)
                 }
                 .onFailure { error ->
@@ -435,7 +456,6 @@ class UserViewModel : ViewModel() {
 
             if (updatedRequest != null) {
                 Log.d(TAG, "Request updated. Status: ${updatedRequest.status}")
-                // マッチング成立時にサポーター情報を取得
                 if (!updatedRequest.matchedSupporterId.isNullOrBlank()) {
                     Log.d(TAG, "Matched supporter found: ${updatedRequest.matchedSupporterId}. Loading details...")
                     loadMatchedRequestDetails(requestId)
@@ -501,10 +521,14 @@ class UserViewModel : ViewModel() {
 
     fun startMonitoringRequest(requestId: String) {
         if (requestId.isBlank()) return
-        // すでに同じIDを監視中なら何もしない（重複防止）
         if (_activeHelpRequest.value?.id == requestId && requestListener != null) {
             return
         }
         listenForRequestUpdates(requestId)
+    }
+
+    // ▼▼▼ 追加: 画面遷移後に一時データをクリアする関数 ▼▼▼
+    fun clearTemporarySupporterInfo() {
+        _temporaryFcmSupporterInfo.value = null
     }
 }

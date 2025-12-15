@@ -49,6 +49,13 @@ fun HelpMarkHolderMatchingScreen(
         label = "rotation"
     )
 
+    LaunchedEffect(requestId) {
+        if (requestId.isNotBlank()) {
+            Log.d("MATCHING_SCREEN", "画面起動: $requestId の監視を強制的に開始します")
+            viewModel.startMonitoringRequest(requestId)
+        }
+    }
+
     LaunchedEffect(bleRequestUuid) {
         bleRequestUuid?.let { result ->
             val rawData = result["data"]

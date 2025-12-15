@@ -120,7 +120,7 @@ fun HelpMarkHolderHomeScreen(
                 Log.e("HOLDER_BLE", "expiredAt is null")
                 return@let
             }
-            Log.d("HOLDER_BLE", "BLE Advertise開始: UUID=$uuid")
+            Log.d("HOLDER_BButtonLE", "BLE Advertise開始: UUID=$uuid")
         
             try {
                 // 既存のAdvertiserがあれば停止
