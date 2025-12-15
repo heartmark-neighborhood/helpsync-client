@@ -108,7 +108,6 @@ fun SupporterHomeScreen(
                     val msgHex = bundle?.getString("msgHex")
                     
                     Log.d("SupporterHome", "Received scan result: result=$scanSuccess, device=$device, rssi=$rssi, msgUtf8=$msgUtf8, msgHex=$msgHex")
-                    Log.d("SupporterHome", "Expected helpRequestId=${viewModel.getHelpRequestId()}")
 
                     if (scanSuccess) {
                         Log.d("SupporterHome", "✅ Scan successful! Device found with matching service data")
@@ -143,10 +142,15 @@ fun SupporterHomeScreen(
 
     val helpRequestJson by viewModel.helpRequestJson.collectAsState()
     LaunchedEffect(helpRequestJson) {
-        helpRequestJson?.let {
+        helpRequestJson?.let { requestData ->
             Log.d("SupporterHome", "Received help request details, navigating...")
-            onNavigateToAcceptance(viewModel.getHelpRequestId() ?: "")
-            viewModel.clearViewedRequest()
+            val requestId = viewModel.getHelpRequestId()
+            Log.d("SupporterHome", "Retrieved helpRequestId: $requestId")
+            // requestIdがある場合はそれを使用、なければ"notification"を使用
+            val idToUse = requestId?.takeIf { it.isNotEmpty() } ?: "notification"
+            Log.d("SupporterHome", "Navigating with ID: $idToUse")
+            onNavigateToAcceptance(idToUse)
+            // クリアはしない - RequestAcceptanceScreenで完了ボタンを押した時にクリアする
         }
     }
 
