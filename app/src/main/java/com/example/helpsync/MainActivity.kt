@@ -23,7 +23,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import com.example.helpsync.auth.SignInScreen
+import com.example.helpsync.request_acceptance_screen.RequestAcceptanceScreen
 import com.example.helpsync.auth.SignUpScreen
 import com.example.helpsync.blescanner.BLEScanReceiver
 import com.example.helpsync.help_mark_holder_matching_complete_screen.HelpMarkHolderMatchingCompleteScreen
@@ -117,7 +119,63 @@ class MainActivity : ComponentActivity() {
                 var selectedRole by rememberSaveable { mutableStateOf<String?>(null) }
                 var hasNavigatedOnStartup by rememberSaveable { mutableStateOf(false) }
 
-                // --- 起動時・ログイン時の自動遷移ロジック ---
+
+                // 通知からの起動を処理
+                var notificationData by rememberSaveable { mutableStateOf<String?>(null) }
+                
+                LaunchedEffect(Unit) {
+                    intent?.let { receivedIntent ->
+                        if (receivedIntent.action == "ACTION_SHOW_ACCEPTANCE_SCREEN") {
+                            val data = receivedIntent.getStringExtra("HELPMARKHOLDER_INFORMATION")
+                            Log.d(TAG, "🔔 Notification tapped - data: $data")
+                            notificationData = data
+                        }
+                    }
+                }
+
+                // アプリ起動時の自動ナビゲーション（既存ログイン時のみ）
+                LaunchedEffect(Unit) {
+                    // ユーザーデータの読み込みを待つ
+                    kotlinx.coroutines.delay(100)
+                    
+                    if (!hasNavigatedOnStartup && userViewModel.isSignedIn && userViewModel.currentUser != null) {
+                        Log.d(TAG, "🚀 Auto-navigation on startup (existing login)")
+                        Log.d(TAG, "User role: ${userViewModel.currentUser?.role}")
+                        Log.d(TAG, "User nickname: ${userViewModel.currentUser?.nickname}")
+                        
+                        val targetScreen = when {
+                            userViewModel.currentUser?.role.isNullOrEmpty() -> {
+                                Log.d(TAG, "→ Navigating to RoleSelection (no role)")
+                                AppScreen.RoleSelection.name
+                            }
+                            userViewModel.currentUser?.nickname.isNullOrEmpty() -> {
+                                Log.d(TAG, "→ Navigating to NicknameSetting (no nickname)")
+                                AppScreen.NicknameSetting.name
+                            }
+                            userViewModel.currentUser?.role == "supporter" -> {
+                                Log.d(TAG, "→ Navigating to SupporterHome")
+                                AppScreen.SupporterHome.name
+                            }
+                            userViewModel.currentUser?.role == "requester" -> {
+                                Log.d(TAG, "→ Navigating to HelpMarkHolderScreen")
+                                AppScreen.HelpMarkHolderScreen.name
+                            }
+                            else -> {
+                                Log.d(TAG, "→ Navigating to RoleSelection (default)")
+                                AppScreen.RoleSelection.name
+                            }
+                        }
+                        
+                        navController.navigate(targetScreen) {
+                            popUpTo(AppScreen.SignIn.name) { inclusive = true }
+                        }
+                        hasNavigatedOnStartup = true
+                    } else {
+                        Log.d(TAG, "No auto-navigation needed (not logged in or first time)")
+                    }
+                }
+
+                // ログイン成功時の処理（初回ログインと2回目以降の起動の両方に対応）
                 val isSignedIn by remember { derivedStateOf { userViewModel.isSignedIn } }
                 val currentUser by remember { derivedStateOf { userViewModel.currentUser } }
 
@@ -137,6 +195,32 @@ class MainActivity : ComponentActivity() {
                         hasNavigatedOnStartup = true
                     }
                 }
+
+                
+                // 通知からの画面遷移処理
+                val supporterViewModel: com.example.helpsync.viewmodel.SupporterViewModel = koinViewModel()
+                LaunchedEffect(notificationData, isSignedIn, currentUser) {
+                    if (notificationData != null && isSignedIn && currentUser?.role == "supporter") {
+                        Log.d(TAG, "🔔 Processing notification data and storing in ViewModel")
+                        
+                        // ViewModelにデータを設定（SupporterHomeが表示されたときに自動遷移する）
+                        val dataMap = mapOf(
+                            "type" to "help-request",
+                            "data" to notificationData!!
+                        )
+                        supporterViewModel.handleFCMData(dataMap)
+                        
+                        // SupporterHomeに遷移（そこから自動的に受け入れ画面へ）
+                        navController.navigate(AppScreen.SupporterHome.name) {
+                            popUpTo(AppScreen.SignIn.name) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                        
+                        // データをクリア
+                        notificationData = null
+                    }
+                }
+                
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
@@ -369,6 +453,25 @@ class MainActivity : ComponentActivity() {
                                 onSignOut = {
                                     hasNavigatedOnStartup = false
                                     navController.navigate(AppScreen.SignIn.name) { popUpTo(0) { inclusive = true } }
+                                }
+                            )
+                        }
+                        
+                        // ディープリンク対応：通知からの遷移
+                        composable(
+                            route = "RequestAcceptance/{requestId}",
+                            arguments = listOf(navArgument("requestId") { type = NavType.StringType }),
+                            deepLinks = listOf(navDeepLink {
+                                uriPattern = "app://helpsync/RequestAcceptance/{requestId}"
+                                action = "ACTION_SHOW_ACCEPTANCE_SCREEN"
+                            })
+                        ) { backStackEntry ->
+                            val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
+                            RequestAcceptanceScreen(
+                                onDoneClick = {
+                                    navController.navigate(AppScreen.SupporterHome.name) {
+                                        popUpTo("RequestAcceptance/{requestId}") { inclusive = true }
+                                    }
                                 }
                             )
                         }

@@ -47,14 +47,22 @@ class SupporterViewModel(
     }
 
     suspend fun handleFCMData(data: Map<String, String>) {
+        Log.d("SupporterViewModel", "🔔 handleFCMData called with type: ${data["type"]}")
+        Log.d("SupporterViewModel", "📋 Data keys: ${data.keys}")
+        data.forEach { (key, value) ->
+            Log.d("SupporterViewModel", "  - $key: ${value.take(100)}")
+        }
+        
         when(data["type"]) {
             "proximity-verification" -> {
+                Log.d("SupporterViewModel", "📍 Processing proximity-verification")
                 _bleRequestUuid.value = data
                 val rawData = data["data"]
                 val json = JSONObject(rawData)
                 viewModelScope.launch {
                     try {
                         cloudMessageRepository.saveHelpRequestId(json.getString("helpRequestId"))
+                        Log.d("SupporterViewModel", "✅ HelpRequestId saved")
                     } catch(e: Exception) {
                         Log.d("Error", "HelpRequestIdの保存に失敗しました")
                         Log.d("Error", "Error Message: ${e.message}")
@@ -63,7 +71,14 @@ class SupporterViewModel(
 
             }
             "help-request" -> {
+                Log.d("SupporterViewModel", "🆘 Processing help-request")
+                Log.d("SupporterViewModel", "📝 Setting _helpRequestJson.value")
                 _helpRequestJson.value = data
+                Log.d("SupporterViewModel", "✅ _helpRequestJson.value set")
+                Log.d("SupporterViewModel", "📊 Current value: ${_helpRequestJson.value}")
+            }
+            else -> {
+                Log.w("SupporterViewModel", "⚠️ Unknown type: ${data["type"]}")
             }
         }
     }
@@ -164,16 +179,12 @@ class SupporterViewModel(
         Log.d("SupporterViewModel", "Cleared viewed request data.")
     }
 
-    fun getHelpRequestId(): String? {
-        var helpRequestId: String? = null
-        viewModelScope.launch {
-            helpRequestId = try {
-                cloudMessageRepository.getHelpRequestId()
-            } catch (e: Exception) {
-                Log.d("Error", "helpRequestIdの取得に失敗しました")
-                null
-            }
+    suspend fun getHelpRequestId(): String? {
+        return try {
+            cloudMessageRepository.getHelpRequestId()
+        } catch (e: Exception) {
+            Log.d("Error", "helpRequestIdの取得に失敗しました")
+            null
         }
-        return helpRequestId
     }
 }

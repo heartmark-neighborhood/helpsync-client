@@ -76,8 +76,11 @@ fun SupporterScreen(
                 SupporterHomeScreen(
                     viewModel = supporterViewModel,
                     onNavigateToAcceptance = { requestId ->
+                        Log.d("SupporterScreen", "onNavigateToAcceptance called with requestId: $requestId")
                         if (requestId.isNotEmpty()) {
+                            Log.d("SupporterScreen", "Navigating to: main/matched_detail/$requestId")
                             tabNavController.navigate("main/matched_detail/$requestId")
+                            Log.d("SupporterScreen", "Navigation command executed")
                         } else {
                             Log.e("SupporterScreen", "Cannot navigate, requestId is empty!")
                         }
@@ -103,16 +106,27 @@ fun SupporterScreen(
                 arguments = listOf(navArgument("requestId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
+                
+                Log.d("SupporterScreen", "🎯 Entered matched_detail composable with requestId: $requestId")
 
                 LaunchedEffect(requestId) {
-                    if (requestId.isNotEmpty()) {
+                    // requestIdが"notification"の場合は、ViewModelに既にデータがあるはずなので何もしない
+                    if (requestId.isNotEmpty() && requestId != "notification") {
+                        Log.d("SupporterScreen", "Fetching request details for: $requestId")
                         userViewModel.getRequestDetails(requestId)
+                    } else {
+                        Log.d("SupporterScreen", "Skipping getRequestDetails - requestId: $requestId")
                     }
                 }
 
                 val request by userViewModel.viewedHelpRequest.collectAsState()
+                val helpRequestJson by supporterViewModel.helpRequestJson.collectAsState()
+                
+                Log.d("SupporterScreen", "request is null: ${request == null}, requestId: $requestId, helpRequestJson is null: ${helpRequestJson == null}")
 
-                if (request != null) {
+                // userViewModelのrequestまたはsupporterViewModelのhelpRequestJsonがあれば表示
+                if (request != null || helpRequestJson != null) {
+                    Log.d("SupporterScreen", "✅ Showing RequestAcceptanceScreen")
                     RequestAcceptanceScreen(
                         viewModel = supporterViewModel, // 正しい ViewModel を渡す
                         onDoneClick = { // ★ 完了ボタンが押されたときの処理
@@ -127,6 +141,7 @@ fun SupporterScreen(
                         }
                     )
                 } else {
+                    Log.d("SupporterScreen", "⏳ Showing loading indicator")
                     CircularProgressIndicator()
                 }
             }

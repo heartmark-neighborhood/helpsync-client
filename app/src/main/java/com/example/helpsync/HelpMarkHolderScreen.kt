@@ -1,6 +1,11 @@
 package com.example.helpsync
 
+
 import android.annotation.SuppressLint
+
+import android.os.Build
+import androidx.annotation.RequiresApi
+
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
@@ -81,24 +86,29 @@ fun HelpMarkHolderScreen(
                 )
             }
             composable(HelpMarkHolderScreenTab.Profile.route) {
-                HelpMarkHolderProfileScreen(
-                    // ViewModelを使用するため、多くの引数は不要
-                    userViewModel = userViewModel,
-                    onBackClick = { /* タブ画面なので基本的に不要 */ },
-                    onCompleteClick = {
-                        // 保存が完了したらホームタブに戻る
-                        tabNavController.navigate(HelpMarkHolderScreenTab.Home.route) {
-                            // popUpToでProfile画面をバックスタックから削除
-                            popUpTo(HelpMarkHolderScreenTab.Home.route) { inclusive = true }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    HelpMarkHolderProfileScreen(
+                        // ViewModelを使用するため、多くの引数は不要
+                        userViewModel = userViewModel,
+                        onBackClick = { /* タブ画面なので基本的に不要 */ },
+                        onCompleteClick = {
+                            // 保存が完了したらホームタブに戻る
+                            tabNavController.navigate(HelpMarkHolderScreenTab.Home.route) {
+                                // popUpToでProfile画面をバックスタックから削除
+                                popUpTo(HelpMarkHolderScreenTab.Home.route) { inclusive = true }
+                            }
+                        },
+                        onSignOut = {
+                            onSignOut()
+                            mainNavController.navigate(AppScreen.SignIn.name) {
+                                popUpTo(0) { inclusive = true }
+                            }
                         }
-                    },
-                    onSignOut = {
-                        onSignOut()
-                        mainNavController.navigate(AppScreen.SignIn.name) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
-                )
+                    )
+                } else {
+                    // API 29未満の場合は簡易版のプロフィール画面を表示
+                    Text("プロフィール画面はAndroid 10以降でサポートされています")
+                }
             }
         }
     }
