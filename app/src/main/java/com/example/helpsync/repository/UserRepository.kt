@@ -457,19 +457,22 @@ class UserRepository {
      * @return ListenerRegistrationを返すようにして、監視を解除できるようにする
      */
     fun listenForRequestUpdates(requestId: String, onUpdate: (HelpRequest?) -> Unit): ListenerRegistration {
+        Log.d(TAG, "🎧 Attaching Firestore listener for helpRequest ID: $requestId") // ログ追加
         return helpRequestsCollection.document(requestId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.w(TAG, "Listen failed.", error)
+                    Log.e(TAG, "❌ Firestore Listen failed for ID: $requestId", error) // エラーログ強化
                     onUpdate(null)
                     return@addSnapshotListener
                 }
 
                 if (snapshot != null && snapshot.exists()) {
+                    Log.d(TAG, "✅ Firestore snapshot received for ID: $requestId. Data: ${snapshot.data}") // ログ追加
                     val request = snapshot.toObject(HelpRequest::class.java)
+                    Log.d(TAG, "✅ Parsed request object: $request") // ログ追加
                     onUpdate(request)
                 } else {
-                    Log.d(TAG, "Current data: null or document deleted")
+                    Log.d(TAG, "ℹ️ Firestore snapshot is null or document does not exist for ID: $requestId") // ログ追加
                     onUpdate(null)
                 }
             }

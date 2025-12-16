@@ -55,7 +55,11 @@ val appModule = module {
             cloudMessageRepository = get()
         )
     }
-    factory { UserViewModel() }
+    factory {
+        UserViewModel(
+            cloudMessageRepository = get()
+        )
+    }
 
     worker {
         LocationWorker(

@@ -50,38 +50,6 @@ class HelpMarkHolderViewModel(
         }
     }
 
-    fun callCreateHelpRequest(latitude: Double, longitude: Double) {
-        viewModelScope.launch {
-            val deviceId = try {
-                cloudMessageRepository.getDeviceId()
-            } catch(e: Exception) {
-                Log.d("Error", "deviceIdの取得に失敗しました")
-            }
-            try {
-                val functions = Firebase.functions("asia-northeast2")
-                val locationMap = hashMapOf(
-                    "latitude" to latitude,
-                    "longitude" to longitude
-                )
-                val data = hashMapOf(
-                    "deviceId" to deviceId,
-                    "location" to locationMap
-                )
-
-                val callResult = functions.getHttpsCallable("createHelpRequest").call(data).await()
-
-                val responseData = callResult.data as? Map<String, Any>
-                val status = responseData?.get("status") as? String
-                val helpRequestIdResult = responseData?.get("helpRequestId") as? String
-                if(status != null) cloudMessageRepository.saveHelpRequestId(helpRequestIdResult)
-
-            } catch(e: Exception){
-                Log.d("Error", "createHelpRequestの呼びだしに失敗しました")
-                Log.d("Error", "エラーメッセージ ${e.message}")
-            }
-        }
-    }
-
     fun callUpdateDeviceLocation(latitude: Double, longitude: Double) {
         viewModelScope.launch {
             val deviceId = try {
@@ -131,7 +99,7 @@ class HelpMarkHolderViewModel(
                 Log.d("Error", "Error Message:${e.message}")
             }
             try {
-                val functions = Firebase.functions("asis-northeast2")
+                val functions = Firebase.functions("asisa-northeast2")
                 val evaluationMap = hashMapOf(
                     "rating" to rating,
                     "comment" to comment

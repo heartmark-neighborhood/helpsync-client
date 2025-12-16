@@ -70,8 +70,8 @@ fun HelpMarkHolderScreen(
             composable(HelpMarkHolderScreenTab.Home.route) {
                 HelpMarkHolderHomeScreen(
                     userViewModel = userViewModel,
-                    onMatchingStarted = {
-                        mainNavController.navigate("HelpMarkHolderMatching") // ルート名を文字列で指定
+                    onMatchingStarted = { requestId ->
+                        mainNavController.navigate("SupporterDetails/$requestId") // 直接SupporterDetailsへ
                     },
                     helpMarkHolderViewModel = koinViewModel(),
                     locationClient = locationClient

@@ -115,7 +115,7 @@ fun RequestAcceptanceScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    "マッチングが成立しました！",
+                    "助けを求めている人がいます!",
                     style = MaterialTheme.typography.titleLarge
                 )
                 Spacer(modifier = Modifier.height(32.dp))

@@ -85,7 +85,14 @@ class BLEScanWorker (
     }
 
     override suspend fun doWork(): Result {
-        Log.d("BLEScanner", "doWorkが実行されました")
+        Log.d("BLEScanWorker", "🔍 doWork() started")
+        Log.d("BLEScanWorker", "📝 UUID to scan: $serviceUuid")
+        
+        if (scanner == null) {
+            Log.e("BLEScanWorker", "❌ BluetoothLeScanner is null! Cannot start scan.")
+            return Result.failure()
+        }
+        
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
@@ -95,11 +102,14 @@ class BLEScanWorker (
             .build()
         try {
             if(ActivityCompat.checkSelfPermission(applicationContext, android.Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
+                Log.d("BLEScanWorker", "✅ BLUETOOTH_SCAN permission granted")
                 scanner?.startScan(listOf(filter), settings, scanCallback)
-
+                Log.d("BLEScanWorker", "🚀 BLE scan started successfully")
+            } else {
+                Log.e("BLEScanWorker", "❌ BLUETOOTH_SCAN permission denied!")
+                return Result.failure()
             }
-            Log.d("BLEScanWorker", "${serviceUuid}")
-            Log.d("BLEScanWorker", "BLEScanを開始しました")
+            Log.d("BLEScanWorker", "⏱️ Scanning for 30 seconds...")
             delay(30_000L)
             scanner?.stopScan(scanCallback)
             Log.d("BLEScanWorker", "BLEScanを停止しました")

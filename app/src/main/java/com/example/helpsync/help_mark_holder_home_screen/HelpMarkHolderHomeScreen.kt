@@ -34,7 +34,7 @@ import org.json.JSONObject
 @Composable
 fun HelpMarkHolderHomeScreen(
     userViewModel: UserViewModel,
-    onMatchingStarted: () -> Unit,
+    onMatchingStarted: (String) -> Unit, // requestIdを受け取るように変更
     helpMarkHolderViewModel : HelpMarkHolderViewModel,
     locationClient: FusedLocationProviderClient
 ) {
@@ -45,6 +45,10 @@ fun HelpMarkHolderHomeScreen(
     val bleRequestUuid by helpMarkHolderViewModel.bleRequestUuid.collectAsState()
 
     var bleAdvertiser by remember { mutableStateOf<BLEAdvertiser?>(null) }
+    
+    // ボタンの連打防止用の状態
+    var isButtonDisabled by remember { mutableStateOf(false) }
+    var cooldownTimeLeft by remember { mutableStateOf(0) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -52,6 +56,18 @@ fun HelpMarkHolderHomeScreen(
         val allGranted = perms.entries.all { it.value }
         if (!allGranted) {
             Toast.makeText(context, "支援の要請には権限が必要です。", Toast.LENGTH_LONG).show()
+        }
+    }
+    
+    // クールダウンタイマーのEffect
+    LaunchedEffect(isButtonDisabled) {
+        if (isButtonDisabled) {
+            cooldownTimeLeft = 3
+            while (cooldownTimeLeft > 0) {
+                kotlinx.coroutines.delay(1000)
+                cooldownTimeLeft--
+            }
+            isButtonDisabled = false
         }
     }
 
@@ -64,9 +80,11 @@ fun HelpMarkHolderHomeScreen(
         )
     }
 
+    // BLE Advertise開始 (PENDING状態の要請がある場合)
     LaunchedEffect(helpRequest) {
         val currentRequest = helpRequest
         if (currentRequest != null && currentRequest.status == RequestStatus.PENDING) {
+            Log.d("HOLDER_HOME", "📡 Starting BLE advertise for pending request: ${currentRequest.id}")
             val advertiser = BLEAdvertiser(context, currentRequest.proximityUuid)
             bleAdvertiser = advertiser
 
@@ -75,8 +93,16 @@ fun HelpMarkHolderHomeScreen(
             ) { status ->
                 Log.d("HOLDER_ADVERTISER", "Status: $status")
             }
+        }
+    }
 
-            onMatchingStarted()
+    // マッチング成立時にマッチング画面に遷移
+    LaunchedEffect(helpRequest?.status) {
+        val currentRequest = helpRequest
+        if (currentRequest != null && currentRequest.status == RequestStatus.MATCHED) {
+            Log.d("HOLDER_HOME", "🎉 Matching completed! Navigating to matching screen")
+            Log.d("HOLDER_HOME", "RequestId: ${currentRequest.id}")
+            onMatchingStarted(currentRequest.id) // requestIdを渡す
         }
     }
 
@@ -174,6 +200,18 @@ fun HelpMarkHolderHomeScreen(
         } else {
             Button(
                 onClick = {
+                    // 連打防止: ボタンを無効化してクールダウンを開始
+                    if (isButtonDisabled) {
+                        Toast.makeText(
+                            context,
+                            "しばらくお待ちください (残り${cooldownTimeLeft}秒)",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@Button
+                    }
+                    
+                    isButtonDisabled = true
+                    
                     when {
                         ContextCompat.checkSelfPermission(
                             context,
@@ -190,7 +228,12 @@ fun HelpMarkHolderHomeScreen(
                                     val lon = location?.longitude ?: 0.0
 
                                     Log.d("LocationClient", "Location acquired: $lat, $lon")
-                                    helpMarkHolderViewModel.callCreateHelpRequest(lat, lon)
+                                    userViewModel.createHelpRequest(lat, lon)
+                                }
+                                .addOnFailureListener {
+                                    // エラー時はボタンを再度有効化
+                                    isButtonDisabled = false
+                                    cooldownTimeLeft = 0
                                 }
                         }
 
@@ -200,13 +243,18 @@ fun HelpMarkHolderHomeScreen(
                             // 権限がない場合、パーミッションリクエストを起動
                             Log.d("LocationButton", "Permission not granted, launching request...")
                             permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
+                            // パーミッションリクエスト時もボタンを再度有効化
+                            isButtonDisabled = false
+                            cooldownTimeLeft = 0
                         }
                     }
                 },
                 modifier = Modifier.size(200.dp),
                 shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
-                enabled = helpRequest == null || helpRequest?.status != RequestStatus.PENDING
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isButtonDisabled) Color.Gray else Color(0xFFD32F2F)
+                ),
+                enabled = (helpRequest == null || helpRequest?.status != RequestStatus.PENDING) && !isButtonDisabled
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,

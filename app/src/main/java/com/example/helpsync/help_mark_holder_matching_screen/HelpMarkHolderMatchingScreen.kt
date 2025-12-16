@@ -1,5 +1,6 @@
 package com.example.helpsync.help_mark_holder_matching_screen
 
+import android.util.Log
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -44,7 +45,11 @@ fun HelpMarkHolderMatchingScreen(
     LaunchedEffect(activeRequest) {
         // リクエストの状態がMATCHEDに変わったら、完了コールバックを呼ぶ
         if (activeRequest?.status == RequestStatus.MATCHED) {
+            Log.d("HelpMarkHolderMatching", "🎉 Request status changed to MATCHED!")
+            Log.d("HelpMarkHolderMatching", "📝 RequestId: $requestId")
+            Log.d("HelpMarkHolderMatching", "🚀 Calling onMatchingComplete with requestId: $requestId")
             onMatchingComplete(requestId)
+            Log.d("HelpMarkHolderMatching", "✅ onMatchingComplete callback executed")
         }
     }
 

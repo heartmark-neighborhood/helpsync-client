@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.helpsync.data.HelpRequest
 import com.example.helpsync.data.User
+import com.example.helpsync.repository.CloudMessageRepository
 import com.example.helpsync.repository.UserRepository
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.ListenerRegistration
@@ -16,9 +17,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.Date
+import kotlinx.coroutines.tasks.await
 
-class UserViewModel : ViewModel() {
+import com.google.firebase.functions.ktx.functions
+import com.google.firebase.ktx.Firebase
+
+class UserViewModel(
+    private val cloudMessageRepository: CloudMessageRepository
+) : ViewModel() {
     private val userRepository = UserRepository()
+    private val functions = Firebase.functions("asia-northeast2")
 
     companion object {
         private const val TAG = "UserViewModel"
@@ -452,23 +460,54 @@ class UserViewModel : ViewModel() {
     /**
      * ヘルプマーク所持者が支援を要請する
      */
-    fun createHelpRequest() {
+    fun createHelpRequest(latitude: Double, longitude: Double) {
         viewModelScope.launch {
-            val user = currentUser ?: return@launch
-            val uid = userRepository.getCurrentUserId() ?: return@launch
+            Log.d(TAG, "🚀 createHelpRequest called in UserViewModel")
             isLoading = true
             errorMessage = null
 
-            userRepository.createHelpRequest(uid, user.nickname)
-                .onSuccess { newRequest ->
-                    _activeHelpRequest.value = newRequest
-                    // リアルタイムでリクエストの更新を監視開始
-                    listenForRequestUpdates(newRequest.id)
+            val deviceId = try {
+                cloudMessageRepository.getDeviceId()
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ deviceIdの取得に失敗しました: ${e.message}")
+                errorMessage = "デバイスIDの取得に失敗しました。"
+                isLoading = false
+                return@launch
+            }
+
+            if (deviceId.isNullOrBlank()) {
+                Log.e(TAG, "❌ Cannot create help request: deviceId is null or blank")
+                errorMessage = "デバイスIDがありません。"
+                isLoading = false
+                return@launch
+            }
+
+            try {
+                Log.d(TAG, "📡 Calling createHelpRequest cloud function...")
+                val locationMap = hashMapOf("latitude" to latitude, "longitude" to longitude)
+                val data = hashMapOf("deviceId" to deviceId, "location" to locationMap)
+
+                val callResult = functions.getHttpsCallable("createHelpRequest").call(data).await()
+                Log.d(TAG, "✅ Cloud function returned successfully")
+
+                val responseData = callResult.data as? Map<String, Any>
+                val helpRequestId = (responseData?.get("helpRequestId") as? Map<String, String>)?.get("value")
+
+                if (!helpRequestId.isNullOrBlank()) {
+                    Log.d(TAG, "✅ Help request created with ID: $helpRequestId")
+                    // listenForRequestUpdatesを呼び出す
+                    listenForRequestUpdates(helpRequestId)
+                } else {
+                    Log.e(TAG, "❌ HelpRequestId not found in response: $responseData")
+                    errorMessage = "ヘルプリクエストのID取得に失敗しました。"
                 }
-                .onFailure { error ->
-                    errorMessage = "リクエストの作成に失敗しました: ${error.message}"
-                }
-            isLoading = false
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ createHelpRequestの呼びだしに失敗しました", e)
+                errorMessage = "ヘルプリクエストの作成に失敗しました: ${e.message}"
+            } finally {
+                isLoading = false
+            }
         }
     }
 
@@ -493,7 +532,9 @@ class UserViewModel : ViewModel() {
     private fun listenForRequestUpdates(requestId: String) {
         // 既存のリスナーがあれば解除
         requestListener?.remove()
+        Log.d(TAG, "🎧 ViewModel is attaching listener for requestId: $requestId") // ログ追加
         requestListener = userRepository.listenForRequestUpdates(requestId) { updatedRequest ->
+            Log.d(TAG, "🔔 ViewModel received update from listener. New status: ${updatedRequest?.status}") // ログ追加
             _activeHelpRequest.value = updatedRequest
         }
     }
@@ -549,31 +590,62 @@ class UserViewModel : ViewModel() {
      * マッチングが成立したリクエストIDを元に、関連するすべての情報（リクエスト、双方のプロフィール）を読み込む
      */
     fun loadMatchedRequestDetails(requestId: String) {
-        if (requestId.isBlank()) return
+        Log.d("UserViewModel", "🔍 loadMatchedRequestDetails called with requestId: $requestId")
+        if (requestId.isBlank()) {
+            Log.w("UserViewModel", "⚠️ requestId is blank, returning")
+            return
+        }
         viewModelScope.launch {
             isLoading = true
+            Log.d("UserViewModel", "📡 Fetching request details...")
             // まずリクエスト自体の詳細を取得
             userRepository.getRequest(requestId)
                 .onSuccess { request ->
+                    Log.d("UserViewModel", "✅ Request fetched successfully")
+                    Log.d("UserViewModel", "  - requesterId: ${request.requesterId}")
+                    Log.d("UserViewModel", "  - matchedSupporterId: ${request.matchedSupporterId}")
+                    Log.d("UserViewModel", "  - status: ${request.status}")
                     _matchedRequestDetails.value = request
+                    
                     // リクエスターのプロフィールを取得
                     if (request.requesterId.isNotBlank()) {
+                        Log.d("UserViewModel", "📡 Fetching requester profile...")
                         userRepository.getUser(request.requesterId)
-                            .onSuccess { user -> _requesterProfile.value = user }
-                            .onFailure { clearMatchedDetails() /* エラー時はクリア */ }
+                            .onSuccess { user -> 
+                                Log.d("UserViewModel", "✅ Requester profile fetched: ${user.nickname}")
+                                _requesterProfile.value = user 
+                            }
+                            .onFailure { e ->
+                                Log.e("UserViewModel", "❌ Failed to fetch requester profile: ${e.message}")
+                                clearMatchedDetails() 
+                            }
                     }
+                    
                     // サポーターのプロフィールを取得
                     if (!request.matchedSupporterId.isNullOrBlank()) {
+                        Log.d("UserViewModel", "📡 Fetching supporter profile...")
                         userRepository.getUser(request.matchedSupporterId)
-                            .onSuccess { user -> _supporterProfile.value = user }
-                            .onFailure { clearMatchedDetails() /* エラー時はクリア */ }
+                            .onSuccess { user -> 
+                                Log.d("UserViewModel", "✅ Supporter profile fetched: ${user.nickname}")
+                                Log.d("UserViewModel", "  - iconUrl: ${user.iconUrl}")
+                                Log.d("UserViewModel", "  - physicalFeatures: ${user.physicalFeatures}")
+                                _supporterProfile.value = user 
+                            }
+                            .onFailure { e ->
+                                Log.e("UserViewModel", "❌ Failed to fetch supporter profile: ${e.message}")
+                                clearMatchedDetails() 
+                            }
+                    } else {
+                        Log.w("UserViewModel", "⚠️ matchedSupporterId is null or blank")
                     }
                 }
-                .onFailure {
+                .onFailure { e ->
+                    Log.e("UserViewModel", "❌ Failed to fetch request: ${e.message}")
                     errorMessage = "リクエスト詳細の取得に失敗しました。"
                     clearMatchedDetails()
                 }
             isLoading = false
+            Log.d("UserViewModel", "✅ loadMatchedRequestDetails completed")
         }
     }
     /**
@@ -583,5 +655,62 @@ class UserViewModel : ViewModel() {
         _matchedRequestDetails.value = null
         _requesterProfile.value = null
         _supporterProfile.value = null
+    }
+
+    // SupporterDetailsScreenで使うためのサポーター情報
+    private val _supporterDetailsJson = MutableStateFlow<Map<String, String>?>(null)
+    val supporterDetailsJson = _supporterDetailsJson.asStateFlow()
+
+    /**
+     * requestIdを元にサポーター情報を読み込み、Map形式でStateFlowを更新する
+     */
+    fun loadSupporterDetails(requestId: String?) {
+        Log.d(TAG, "🔍 loadSupporterDetails called with requestId: $requestId")
+        if (requestId.isNullOrBlank()) {
+            Log.w(TAG, "⚠️ requestId is null or blank, returning")
+            return
+        }
+
+        viewModelScope.launch {
+            isLoading = true
+            userRepository.getRequest(requestId)
+                .onSuccess { request ->
+                    val supporterId = request.matchedSupporterId
+                    if (supporterId.isNullOrBlank()) {
+                        Log.e(TAG, "❌ Supporter ID not found in the request.")
+                        errorMessage = "支援者情報が見つかりません。"
+                        isLoading = false
+                        return@launch
+                    }
+
+                    userRepository.getUser(supporterId)
+                        .onSuccess { supporter ->
+                            val supporterMap = mapOf(
+                                "nickname" to (supporter.nickname ?: "ニックネーム不明"),
+                                "iconUrl" to (supporter.iconUrl ?: ""),
+                                "physicalFeatures" to (supporter.physicalFeatures ?: "追加情報なし")
+                            )
+                            _supporterDetailsJson.value = supporterMap
+                            Log.d(TAG, "✅ Supporter details loaded and converted to map: $supporterMap")
+                        }
+                        .onFailure { e ->
+                            Log.e(TAG, "❌ Failed to fetch supporter profile: ${e.message}")
+                            errorMessage = "支援者情報の取得に失敗しました。"
+                        }
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "❌ Failed to fetch request details: ${e.message}")
+                    errorMessage = "リクエスト詳細の取得に失敗しました。"
+                }
+            isLoading = false
+        }
+    }
+
+    /**
+     * 表示しているサポーター詳細情報をクリアする
+     */
+    fun clearSupporterDetails() {
+        _supporterDetailsJson.value = null
+        Log.d(TAG, "🧹 Supporter details cleared.")
     }
 }

@@ -30,29 +30,54 @@ class HelpRequestMessageReceiver : FirebaseMessagingService(), KoinComponent{
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
+        Log.d("FCM_Service", "📬 onMessageReceived called")
         if(remoteMessage.data.isNotEmpty()) {
             val receivedData = remoteMessage.data
+            val messageType = receivedData["type"]
 
-            Log.d("FCM_Service", "received data: $receivedData")
+            Log.d("FCM_Service", "📨 Message type: $messageType")
+            Log.d("FCM_Service", "📝 Full received data: $receivedData")
 
             repository.postCloudMessage(receivedData)
+            Log.d("FCM_Service", "✅ Message posted to repository")
 
-            if(receivedData["type"] == "help-request")
-            {
-                val rawData = receivedData["data"]
-                val data = JSONObject(rawData)
-                //ヘルプマーク所持者側の場合通知を送る必要は無い
-                if(data.has("requester")) sendNotification(data)
+            when(messageType) {
+                "help-request" -> {
+                    Log.d("FCM_Service", "🆘 Processing help-request message")
+                    val rawData = receivedData["data"]
+                    val data = JSONObject(rawData)
+                    //ヘルプマーク所持者側の場合通知を送る必要は無い
+                    if(data.has("requester")) {
+                        Log.d("FCM_Service", "📤 Sending notification to supporter")
+                        sendNotification(data)
+                    } else {
+                        Log.d("FCM_Service", "ℹ️ Message is for help mark holder, no notification needed")
+                    }
+                }
+                "proximity-verification" -> {
+                    Log.d("FCM_Service", "🔍 Processing proximity-verification message")
+                    val rawData = receivedData["data"]
+                    Log.d("FCM_Service", "📝 Proximity verification data: $rawData")
+                }
+                else -> {
+                    Log.w("FCM_Service", "⚠️ Unknown message type: $messageType")
+                }
             }
+        } else {
+            Log.w("FCM_Service", "⚠️ Received empty message data")
         }
     }
 
     override fun onNewToken(token: String) {
+        Log.d("FCM_Token", "🔑 New FCM token received: ${token.take(20)}...")
         serviceScope.launch {
             try {
-                repository.callRenewDeviceToken(token = token)
+                Log.d("FCM_Token", "📤 Sending token to server...")
+                repository.callrenewDeviceToken(token)
+                Log.d("FCM_Token", "✅ Token successfully sent to server")
             } catch (e: Exception) {
-                Log.e("debug", "Failed to send FCM token")
+                Log.e("FCM_Token", "❌ Failed to send FCM token: ${e.message}")
+                e.printStackTrace()
             }
         }
     }

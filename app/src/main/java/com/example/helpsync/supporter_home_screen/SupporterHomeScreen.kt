@@ -37,8 +37,18 @@ fun SupporterHomeScreen(
     viewModel: SupporterViewModel = koinViewModel(),
     onNavigateToAcceptance: (requestId: String) -> Unit
 ) {
+    // Screen visibility check
+    LaunchedEffect(Unit) {
+        Log.d("SupporterHome", "🖥️ SupporterHomeScreen is now displayed/composed")
+    }
+    
     val context = LocalContext.current
     val bleRequestUuid by viewModel.bleRequestUuid.collectAsState()
+    
+    // Log whenever bleRequestUuid changes
+    LaunchedEffect(bleRequestUuid) {
+        Log.d("SupporterHome", "📊 bleRequestUuid value changed: $bleRequestUuid")
+    }
 
     // --- Permissions ---
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -62,34 +72,61 @@ fun SupporterHomeScreen(
 
     // --- BLE Scan Start Trigger ---
     LaunchedEffect(bleRequestUuid) {
+        Log.d("SupporterHome", "🔍 LaunchedEffect(bleRequestUuid) triggered")
         bleRequestUuid?.let { result ->
+            Log.d("SupporterHome", "📥 bleRequestUuid is not null, processing...")
             val rawData = result["data"]
+            Log.d("SupporterHome", "📝 Raw data: $rawData")
             val data = JSONObject(rawData)
             val uuidToScan = data.getString("proximityVerificationId")
+            Log.d("SupporterHome", "🆔 UUID to scan: $uuidToScan")
+            
             if (uuidToScan == null) {
-                Log.e("HOLDER_BLE", "UUID is null")
+                Log.e("SupporterHome", "❌ UUID is null, cannot start scan")
                 return@let
             }
 
             if (!uuidToScan.isNullOrBlank() && uuidToScan != "string") {
+                Log.d("SupporterHome", "✅ UUID is valid, starting BLE scan...")
                 val inputData = workDataOf("SCAN_UUID" to uuidToScan)
                 val bleScanWorkRequest = OneTimeWorkRequestBuilder<BLEScanWorker>()
                     .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                     .setInputData(inputData)
                     .build()
                 val workManager = WorkManager.getInstance(context)
+                Log.d("SupporterHome", "📤 Enqueueing BLE scan work (REPLACE policy)")
+                Log.d("SupporterHome", "🆔 Work request ID: ${bleScanWorkRequest.id}")
+                
                 workManager.enqueueUniqueWork(
                     "BLEScanWork",
                     ExistingWorkPolicy.REPLACE,
                     bleScanWorkRequest
                 )
+                Log.d("SupporterHome", "🚀 BLE scan work enqueued successfully")
+                
+                // Monitor work status
+                workManager.getWorkInfoByIdLiveData(bleScanWorkRequest.id).observeForever { workInfo ->
+                    if (workInfo != null) {
+                        Log.d("SupporterHome", "📊 WorkInfo state: ${workInfo.state}")
+                        when (workInfo.state) {
+                            androidx.work.WorkInfo.State.ENQUEUED -> Log.d("SupporterHome", "⏳ Work is enqueued")
+                            androidx.work.WorkInfo.State.RUNNING -> Log.d("SupporterHome", "🏃 Work is running")
+                            androidx.work.WorkInfo.State.SUCCEEDED -> Log.d("SupporterHome", "✅ Work succeeded")
+                            androidx.work.WorkInfo.State.FAILED -> Log.e("SupporterHome", "❌ Work failed")
+                            androidx.work.WorkInfo.State.BLOCKED -> Log.w("SupporterHome", "🚫 Work is blocked")
+                            androidx.work.WorkInfo.State.CANCELLED -> Log.w("SupporterHome", "🛑 Work was cancelled")
+                        }
+                    } else {
+                        Log.e("SupporterHome", "❌ WorkInfo is null")
+                    }
+                }
             } else {
                 Log.d(
                     "SupporterHome",
-                    "No valid UUID to scan yet or scan finished ($uuidToScan). Waiting..."
+                    "⚠️ Invalid UUID: '$uuidToScan' - not starting scan"
                 )
             }
-        }
+        } ?: Log.d("SupporterHome", "⏳ bleRequestUuid is null, waiting...")
     }
 
     // --- BroadcastReceiver Setup ---
@@ -142,14 +179,17 @@ fun SupporterHomeScreen(
 
     val helpRequestJson by viewModel.helpRequestJson.collectAsState()
     LaunchedEffect(helpRequestJson) {
+        Log.d("SupporterHome", "LaunchedEffect triggered, helpRequestJson is null: ${helpRequestJson == null}")
         helpRequestJson?.let { requestData ->
-            Log.d("SupporterHome", "Received help request details, navigating...")
+            Log.d("SupporterHome", "📥 Received help request details, navigating...")
+            Log.d("SupporterHome", "📋 Request data keys: ${requestData.keys}")
             val requestId = viewModel.getHelpRequestId()
-            Log.d("SupporterHome", "Retrieved helpRequestId: $requestId")
+            Log.d("SupporterHome", "📝 Retrieved helpRequestId: $requestId")
             // requestIdがある場合はそれを使用、なければ"notification"を使用
             val idToUse = requestId?.takeIf { it.isNotEmpty() } ?: "notification"
-            Log.d("SupporterHome", "Navigating with ID: $idToUse")
+            Log.d("SupporterHome", "🚀 Navigating with ID: $idToUse")
             onNavigateToAcceptance(idToUse)
+            Log.d("SupporterHome", "✅ Navigation callback executed")
             // クリアはしない - RequestAcceptanceScreenで完了ボタンを押した時にクリアする
         }
     }

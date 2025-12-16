@@ -30,7 +30,7 @@ fun HelpMarkHolderMatchingCompleteScreen(
     requestId: String,
     userViewModel: UserViewModel,
     helpMarkHolderViewModel: HelpMarkHolderViewModel,
-    onHomeClick: () -> Unit = {}
+    onHomeClick: () -> Unit = {},
 ) {
     val supporterProfile by userViewModel.supporterProfile.collectAsState()
     val scaleAnimation = remember { Animatable(0f) }
@@ -162,7 +162,7 @@ fun HelpMarkHolderMatchingCompleteScreen(
 
             OutlinedButton(
                 onClick = {
-                    helpMarkHolderViewModel.callCompleteHelp(5, "thank you!");
+                    helpMarkHolderViewModel.callCompleteHelp(5, "thank you!")
                     onHomeClick()
                 },
                 modifier = Modifier

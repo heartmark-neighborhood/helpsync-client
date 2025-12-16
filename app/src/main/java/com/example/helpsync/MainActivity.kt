@@ -32,6 +32,7 @@ import com.example.helpsync.help_mark_holder_matching_complete_screen.HelpMarkHo
 import com.example.helpsync.help_mark_holder_matching_screen.HelpMarkHolderMatchingScreen
 import com.example.helpsync.help_mark_holder_home_screen.HelpMarkHolderHomeScreen
 import com.example.helpsync.help_mark_holder_profile_screen.HelpMarkHolderProfileScreen
+import com.example.helpsync.supporter_details_screen.SupporterDetailsScreen
 import com.example.helpsync.nickname_setting.NicknameSetting
 import com.example.helpsync.profile.ProfileEditScreen
 import com.example.helpsync.profile.ProfileScreen
@@ -46,6 +47,7 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.tasks.await
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
@@ -152,6 +154,41 @@ class MainActivity : ComponentActivity() {
                             Log.d(TAG, "🔔 Notification tapped - data: $data")
                             notificationData = data
                         }
+                    }
+                }
+
+                // FCMトークンをサーバーに送信（アプリ起動時に必ず実行）
+                LaunchedEffect(Unit) {
+                    try {
+                        // Firebase Authの準備ができるまで待つ
+                        kotlinx.coroutines.delay(500)
+                        
+                        val currentAuthUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                        if (currentAuthUser != null) {
+                            Log.d(TAG, "🔑 Getting FCM token on app startup...")
+                            Log.d(TAG, "👤 Current user ID: ${currentAuthUser.uid}")
+                            
+                            val token = com.google.firebase.messaging.FirebaseMessaging.getInstance().token.await()
+                            Log.d(TAG, "✅ FCM token obtained: ${token.take(20)}...")
+                            
+                            val repo: com.example.helpsync.repository.CloudMessageRepository = org.koin.java.KoinJavaComponent.get(com.example.helpsync.repository.CloudMessageRepository::class.java)
+                            
+                            // DeviceIdの確認
+                            val deviceId = repo.getDeviceId()
+                            Log.d(TAG, "📱 Current deviceId: $deviceId")
+                            
+                            if (deviceId.isNullOrBlank()) {
+                                Log.w(TAG, "⚠️ DeviceId is null or blank - FCM token cannot be registered!")
+                            } else {
+                                repo.callrenewDeviceToken(token)
+                                Log.d(TAG, "✅ FCM token sent to server on startup")
+                            }
+                        } else {
+                            Log.d(TAG, "⏭️ Skipping FCM token send (not logged in)")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "❌ Failed to send FCM token on startup: ${e.message}")
+                        e.printStackTrace()
                     }
                 }
 
@@ -363,7 +400,8 @@ class MainActivity : ComponentActivity() {
                                 requestId = requestId,
                                 viewModel = userViewModel,
                                 onMatchingComplete = { completedRequestId ->
-                                    navController.navigate("${AppScreen.HelpMarkHolderMatchingComplete.name}/$completedRequestId") {
+                                    // マッチング完了後、直接サポーター詳細画面に自動遷移
+                                    navController.navigate("${AppScreen.SupporterDetails.name}/$completedRequestId") {
                                         popUpTo(AppScreen.HelpMarkHolderMatching.name) { inclusive = true }
                                     }
                                 },
@@ -387,6 +425,21 @@ class MainActivity : ComponentActivity() {
                                 onHomeClick = {
                                     navController.navigate(AppScreen.HelpMarkHolderScreen.name) {
                                         popUpTo(AppScreen.HelpMarkHolderMatchingComplete.name) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        composable(
+                            route = "${AppScreen.SupporterDetails.name}/{requestId}",
+                            arguments = listOf(navArgument("requestId") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val requestId = backStackEntry.arguments?.getString("requestId")
+                            SupporterDetailsScreen(
+                                requestId = requestId,
+                                onDoneClick = {
+                                    navController.navigate(AppScreen.HelpMarkHolderScreen.name) {
+                                        popUpTo(AppScreen.SupporterDetails.name) { inclusive = true }
                                     }
                                 }
                             )
@@ -497,8 +550,10 @@ class MainActivity : ComponentActivity() {
                         composable(AppScreen.HelpMarkHolderHome.name) {
                             HelpMarkHolderHomeScreen(
                                 userViewModel = userViewModel,
-                                onMatchingStarted = {
-                                    navController.navigate(AppScreen.HelpMarkHolderMatching.name)
+                                onMatchingStarted = { requestId ->
+                                    Log.d(TAG, "📍 onMatchingStarted called with requestId: $requestId")
+                                    Log.d(TAG, "🚀 Navigating directly to SupporterDetails")
+                                    navController.navigate("${AppScreen.SupporterDetails.name}/$requestId")
                                 },
                                 helpMarkHolderViewModel = helpMarkHolderViewModel,
                                 locationClient = fusedLocationClient
@@ -529,18 +584,8 @@ class MainActivity : ComponentActivity() {
                                 requestId = userViewModel.activeHelpRequest.value?.id ?: "",
                                 viewModel = userViewModel,
                                 onMatchingComplete = { completedRequestId ->
-                                    val dummySupporter = SupporterInfo(
-                                        id = "dummy123",
-                                        nickname = "やさしい人",
-                                        iconUrl = "https://example.com/dummy-profile.jpg"
-                                    )
-                                    val navInfo = SupporterNavInfo(
-                                        requestId = completedRequestId,
-                                        supporterInfo = dummySupporter
-                                    )
-                                    val infoJson = Json.encodeToString(navInfo)
-                                    val encodedJson = URLEncoder.encode(infoJson, "UTF-8")
-                                    navController.navigate("${AppScreen.HelpMarkHolderMatchingComplete.name}/$encodedJson") {
+                                    // マッチング完了後、直接サポーター詳細画面に自動遷移
+                                    navController.navigate("${AppScreen.SupporterDetails.name}/$completedRequestId") {
                                         popUpTo(AppScreen.HelpMarkHolderMatching.name) { inclusive = true }
                                     }
                                 },

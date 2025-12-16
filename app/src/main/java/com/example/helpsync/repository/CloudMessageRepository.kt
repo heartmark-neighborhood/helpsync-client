@@ -26,7 +26,7 @@ interface CloudMessageRepository {
 
     suspend fun getHelpRequestId() : String?
     suspend fun saveHelpRequestId(helpRequestId: String?)
-    suspend fun callRenewDeviceToken(token: String)
+    suspend fun callrenewDeviceToken(token: String)
     suspend fun callHandleProximityVerificationResultBackGround(scanResult: Boolean)
 }
 
@@ -49,44 +49,77 @@ class CloudMessageRepositoryImpl (
 
     override fun postCloudMessage(data: Map<String, String>)
     {
+        Log.d("CloudMessageRepo", "📬 postCloudMessage called, type: ${data["type"]}")
         when (data["type"]) {
             "help-request" -> {
+                Log.d("CloudMessageRepo", "🆘 Processing help-request")
                 val success = _helpRequestMessageFlow.tryEmit(data)
                 if(!success) {
-                    Log.w("helpRequestFCM", "Failed to emit helpRequestFCM data")
+                    Log.w("CloudMessageRepo", "❌ Failed to emit helpRequestFCM data")
+                } else {
+                    Log.d("CloudMessageRepo", "✅ help-request emitted successfully")
                 }
             }
             "proximity-verification" -> {
+                Log.d("CloudMessageRepo", "🔍 Processing proximity-verification")
                 val rawData = data["data"]
-                val json = JSONObject(rawData)
-                val helpRequestId = json.getString("helpRequestId")
-                repositoryScope.launch {
-                    try {
-                        saveHelpRequestId(helpRequestId)
-                        val success = _bleRequestMessageFlow.tryEmit(data)
-                        if(!success) {
-                            Log.w("proximity-verificationFCM", "Failed to emit proximity-verificationFCM data")
+                Log.d("CloudMessageRepo", "📝 Raw proximity-verification data: $rawData")
+                try {
+                    val json = JSONObject(rawData)
+                    val helpRequestId = json.getString("helpRequestId")
+                    Log.d("CloudMessageRepo", "📋 HelpRequestId: $helpRequestId")
+                    repositoryScope.launch {
+                        try {
+                            saveHelpRequestId(helpRequestId)
+                            Log.d("CloudMessageRepo", "💾 HelpRequestId saved")
+                            val success = _bleRequestMessageFlow.tryEmit(data)
+                            if(!success) {
+                                Log.w("CloudMessageRepo", "❌ Failed to emit proximity-verification data")
+                            } else {
+                                Log.d("CloudMessageRepo", "✅ proximity-verification emitted successfully")
+                            }
+                        } catch(e: Exception) {
+                            Log.e("CloudMessageRepo", "❌ HelpRequestIdの保存に失敗しました: ${e.message}")
+                            e.printStackTrace()
                         }
-                    } catch(e: Exception) {
-                        Log.d("Debug", "HelpRequestIdの保存に失敗しました")
-                        Log.d("Debug", "${e.message}")
                     }
+                } catch(e: Exception) {
+                    Log.e("CloudMessageRepo", "❌ proximity-verificationの解析に失敗しました: ${e.message}")
+                    e.printStackTrace()
                 }
-
             }
-
+            else -> {
+                Log.w("CloudMessageRepo", "⚠️ Unknown message type: ${data["type"]}")
+            }
         }
     }
 
-    override suspend fun callRenewDeviceToken(token: String) {
-        val functions = Firebase.functions("asis-northeast2")
+    override suspend fun callrenewDeviceToken(token: String) {
+        val functions = Firebase.functions("asia-northeast2")
         val deviceId = deviceIdDataSource.getDeviceID()
+        
+        Log.d("CloudMessageRepo", "🔄 callrenewDeviceToken called")
+        Log.d("CloudMessageRepo", "📱 DeviceId: $deviceId")
+        Log.d("CloudMessageRepo", "🔑 Token (first 30 chars): ${token.take(30)}...")
+        
+        if (deviceId.isNullOrBlank()) {
+            Log.e("CloudMessageRepo", "❌ Cannot renew token: deviceId is null or blank")
+            return
+        }
+        
         val data = hashMapOf(
             "deviceId" to deviceId,
             "deviceToken" to token
         )
 
-        val callResult = functions.getHttpsCallable("RenewDeviceToken").call(data).await()
+        try {
+            val callResult = functions.getHttpsCallable("renewDeviceToken").call(data).await()
+            Log.d("CloudMessageRepo", "✅ renewDeviceToken cloud function completed successfully")
+            Log.d("CloudMessageRepo", "📊 Result: ${callResult.data}")
+        } catch (e: Exception) {
+            Log.e("CloudMessageRepo", "❌ renewDeviceToken failed: ${e.message}")
+            e.printStackTrace()
+        }
     }
 
     override suspend fun callHandleProximityVerificationResultBackGround(scanResult: Boolean) {
