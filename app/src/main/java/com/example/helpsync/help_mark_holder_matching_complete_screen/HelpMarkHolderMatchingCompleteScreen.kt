@@ -24,7 +24,6 @@ import coil.compose.AsyncImage
 import com.example.helpsync.viewmodel.HelpMarkHolderViewModel
 import com.example.helpsync.viewmodel.UserViewModel
 
-// この画面はViewModelから直接データを取得するため、引数のdata classは不要になります
 @Composable
 fun HelpMarkHolderMatchingCompleteScreen(
     requestId: String,
@@ -32,12 +31,15 @@ fun HelpMarkHolderMatchingCompleteScreen(
     helpMarkHolderViewModel: HelpMarkHolderViewModel,
     onHomeClick: () -> Unit = {}
 ) {
+
     val supporterProfile by userViewModel.supporterProfile.collectAsState()
     val scaleAnimation = remember { Animatable(0f) }
 
-    // 画面が表示されたときに、指定されたrequestIdの詳細を読み込む
     LaunchedEffect(requestId) {
-        userViewModel.loadMatchedRequestDetails(requestId)
+        if (requestId.isNotEmpty()) {
+            userViewModel.loadMatchedRequestDetails(requestId)
+        }
+
         scaleAnimation.animateTo(
             targetValue = 1f,
             animationSpec = spring(
@@ -47,7 +49,6 @@ fun HelpMarkHolderMatchingCompleteScreen(
         )
     }
 
-    // 画面から離れるときにViewModelのデータをクリアする
     DisposableEffect(Unit) {
         onDispose {
             userViewModel.clearMatchedDetails()
@@ -63,10 +64,14 @@ fun HelpMarkHolderMatchingCompleteScreen(
         verticalArrangement = Arrangement.Center
     ) {
         if (supporterProfile == null) {
-            // データ読み込み中はローディング表示
-            CircularProgressIndicator()
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("サポーター情報を取得中...")
+            }
         } else {
-            // データ読み込み完了後のUI
+            val profile = supporterProfile ?: return@Column
+
             Spacer(modifier = Modifier.weight(1f))
 
             Box(
@@ -121,15 +126,14 @@ fun HelpMarkHolderMatchingCompleteScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(60.dp)
+                            .size(80.dp)
                             .clip(CircleShape)
                             .background(Color(0xFFE0E0E0)),
                         contentAlignment = Alignment.Center
                     ) {
-                        // ViewModelから取得したアイコンURLを表示
-                        if (supporterProfile?.iconUrl?.isNotEmpty() == true) {
+                        if (!profile.iconUrl.isNullOrEmpty()) {
                             AsyncImage(
-                                model = supporterProfile!!.iconUrl,
+                                model = profile.iconUrl,
                                 contentDescription = "支援者プロフィール写真",
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -140,7 +144,7 @@ fun HelpMarkHolderMatchingCompleteScreen(
                             Icon(
                                 Icons.Default.Person,
                                 contentDescription = "支援者",
-                                modifier = Modifier.size(30.dp),
+                                modifier = Modifier.size(40.dp),
                                 tint = Color.Gray
                             )
                         }
@@ -148,13 +152,21 @@ fun HelpMarkHolderMatchingCompleteScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // ViewModelから取得したニックネームを表示
                     Text(
-                        supporterProfile!!.nickname,
+                        text = profile.nickname.ifEmpty { "名称未設定" },
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color.DarkGray
                     )
+
+                    if (!profile.physicalFeatures.isNullOrEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = profile.physicalFeatures,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Gray
+                        )
+                    }
                 }
             }
 
@@ -162,7 +174,7 @@ fun HelpMarkHolderMatchingCompleteScreen(
 
             OutlinedButton(
                 onClick = {
-                    helpMarkHolderViewModel.callCompleteHelp(5, "thank you!");
+                    helpMarkHolderViewModel.callCompleteHelp(5, "thank you!")
                     onHomeClick()
                 },
                 modifier = Modifier

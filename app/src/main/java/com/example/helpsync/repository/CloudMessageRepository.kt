@@ -81,14 +81,19 @@ class CloudMessageRepositoryImpl (
     }
 
     override suspend fun callRenewDeviceToken(token: String) {
-        val functions = Firebase.functions("asis-northeast2")
+        // 修正: asis -> asia
+        val functions = Firebase.functions("asia-northeast2")
         val deviceId = deviceIdDataSource.getDeviceID()
         val data = hashMapOf(
             "deviceId" to deviceId,
             "deviceToken" to token
         )
 
-        val callResult = functions.getHttpsCallable("RenewDeviceToken").call(data).await()
+        try {
+            functions.getHttpsCallable("RenewDeviceToken").call(data).await()
+        } catch (e: Exception) {
+            Log.e("CloudMessageRepo", "RenewDeviceToken failed: ${e.message}")
+        }
     }
 
     override suspend fun callHandleProximityVerificationResultBackGround(scanResult: Boolean) {
@@ -97,6 +102,7 @@ class CloudMessageRepositoryImpl (
         } catch (e:Exception) {
             Log.d("Error", "HelpRequestIdの取得に失敗しました")
             Log.d("Error", "Error Message:${e.message}")
+            return // IDがなければ処理を中断
         }
         try {
             val functions = Firebase.functions("asia-northeast2")
@@ -108,7 +114,7 @@ class CloudMessageRepositoryImpl (
             )
 
             Log.d("Supporter", "call HandleProximityVerificationResult in background")
-            val callResult = functions.getHttpsCallable("handleProximityVerificationResult").call(data).await()
+            functions.getHttpsCallable("handleProximityVerificationResult").call(data).await()
         } catch(e: Exception) {
             Log.d("Error", "handleProximityVerificationResultの実行に失敗しました")
             Log.d("Error", "Error message: ${e.message}")
@@ -131,11 +137,25 @@ class CloudMessageRepositoryImpl (
         helpRequestIdDataSource.saveHelpRequestId(helpRequestId)
     }
 
+    // ▼▼ 実装漏れしていたメソッドを追加 ▼▼
+    override suspend fun deleteDevice() {
+        try {
+            // まずローカルのIDを消去
+            deviceIdDataSource.saveDeviceId(null)
+
+            // サーバー側のデータも削除するAPIがある場合はここで呼び出します
+            // val functions = Firebase.functions("asia-northeast2")
+            // functions.getHttpsCallable("deleteDevice").call().await()
+
+            Log.d("CloudMessageRepo", "deleteDevice executed (local cleared)")
+        } catch (e: Exception) {
+            Log.e("CloudMessageRepo", "Failed to delete device: ${e.message}")
+        }
+    }
+
     override suspend fun callRegisterNewDevice(token: String) {
         try {
             val functions = Firebase.functions("asia-northeast2")
-            // サーバー側が期待するパラメータ名に合わせて送信
-            // (通常は deviceToken や id などを送ります)
             val data = hashMapOf(
                 "deviceToken" to token
             )
@@ -143,7 +163,6 @@ class CloudMessageRepositoryImpl (
             Log.d("CloudMessageRepo", "Device registered to server successfully")
         } catch (e: Exception) {
             Log.e("CloudMessageRepo", "Failed to register device: ${e.message}")
-            // 登録済みエラーなどの場合は無視して良い場合もあるが、一旦ログに出す
         }
     }
 }

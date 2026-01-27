@@ -36,6 +36,7 @@ import org.koin.androidx.compose.koinViewModel
 fun SupporterHomeScreen(
     viewModel: SupporterViewModel = koinViewModel(),
     onNavigateToAcceptance: (requestId: String) -> Unit
+    // onSignOut は親の SupporterScreen で管理するためここでは削除
 ) {
     val context = LocalContext.current
     val bleRequestUuid by viewModel.bleRequestUuid.collectAsState()
@@ -66,10 +67,6 @@ fun SupporterHomeScreen(
             val rawData = result["data"]
             val data = JSONObject(rawData)
             val uuidToScan = data.getString("proximityVerificationId")
-            if (uuidToScan == null) {
-                Log.e("HOLDER_BLE", "UUID is null")
-                return@let
-            }
 
             if (!uuidToScan.isNullOrBlank() && uuidToScan != "string") {
                 val inputData = workDataOf("SCAN_UUID" to uuidToScan)
@@ -84,10 +81,7 @@ fun SupporterHomeScreen(
                     bleScanWorkRequest
                 )
             } else {
-                Log.d(
-                    "SupporterHome",
-                    "No valid UUID to scan yet or scan finished ($uuidToScan). Waiting..."
-                )
+                Log.d("SupporterHome", "No valid UUID to scan yet or scan finished. Waiting...")
             }
         }
     }
@@ -97,46 +91,28 @@ fun SupporterHomeScreen(
         val bleScanReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 if (intent.action == "com.example.SCAN_RESULT") {
-                    Log.d("SupporterHome", "Received SCAN_RESULT broadcast, intent extras: ${intent.extras}")
-                    
                     val bundle: Bundle? = intent.extras
-                    // Use the new key names from BLEScanner
                     val scanSuccess = bundle?.getBoolean("result") ?: false
-                    val device = bundle?.getString("device")
-                    val rssi = bundle?.getInt("rssi", Int.MIN_VALUE)
-                    val msgUtf8 = bundle?.getString("msgUtf8")
-                    val msgHex = bundle?.getString("msgHex")
-                    
-                    Log.d("SupporterHome", "Received scan result: result=$scanSuccess, device=$device, rssi=$rssi, msgUtf8=$msgUtf8, msgHex=$msgHex")
-                    Log.d("SupporterHome", "Expected helpRequestId=${viewModel.getHelpRequestId()}")
 
                     if (scanSuccess) {
-                        Log.d("SupporterHome", "✅ Scan successful! Device found with matching service data")
-                        Toast.makeText(context, "ヘルプ要請を発見！ device=$device rssi=$rssi", Toast.LENGTH_SHORT).show()
-                        // Cloud Function call is handled by BLEScanner; just stop the service
+                        Toast.makeText(context, "ヘルプ要請を発見！", Toast.LENGTH_SHORT).show()
                         context.stopService(Intent(context, BLEScanner::class.java))
                     } else {
-                        Log.w("SupporterHome", "Scan failed or timed out (no matching device found)")
-                        Toast.makeText(context, "ヘルプ要請が見つかりませんでした", Toast.LENGTH_SHORT).show()
-                        // Cloud Function call for failure is handled by BLEScanner
                         context.stopService(Intent(context, BLEScanner::class.java))
                     }
                 }
             }
         }
 
-        // Register the receiver
         val filter = IntentFilter("com.example.SCAN_RESULT")
         ContextCompat.registerReceiver(context, bleScanReceiver, filter, ContextCompat.RECEIVER_EXPORTED)
-        Log.d("SupporterHome", "Scan result receiver registered.")
 
         onDispose {
             try {
                 context.unregisterReceiver(bleScanReceiver)
                 context.stopService(Intent(context, BLEScanner::class.java))
-                Log.d("SupporterHome", "Scan result receiver unregistered and service stopped on dispose.")
             } catch (e: Exception) {
-                Log.e("SupporterHome", "Error during receiver cleanup: ${e.message}")
+                Log.e("SupporterHome", "Error during cleanup: ${e.message}")
             }
         }
     }
@@ -144,12 +120,10 @@ fun SupporterHomeScreen(
     val helpRequestJson by viewModel.helpRequestJson.collectAsState()
     LaunchedEffect(helpRequestJson) {
         helpRequestJson?.let {
-            Log.d("SupporterHome", "Received help request details, navigating...")
             onNavigateToAcceptance(viewModel.getHelpRequestId() ?: "")
             viewModel.clearViewedRequest()
         }
     }
-
 
     // --- UI ---
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

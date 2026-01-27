@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
+import androidx.navigation.navDeepLink
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -33,6 +34,7 @@ import com.example.helpsync.help_mark_holder_profile_screen.HelpMarkHolderProfil
 import com.example.helpsync.nickname_setting.NicknameSetting
 import com.example.helpsync.profile.ProfileEditScreen
 import com.example.helpsync.profile.ProfileScreen
+import com.example.helpsync.request_acceptance_screen.RequestAcceptanceScreen
 import com.example.helpsync.role_selection_screen.RoleSelectionScreen
 import com.example.helpsync.role_selection_screen.RoleType
 import com.example.helpsync.settings_screen.SettingsScreen
@@ -101,7 +103,6 @@ class MainActivity : ComponentActivity() {
             Log.d(TAG, "✅ Firebase initialized successfully")
             val auth = FirebaseAuth.getInstance()
             Log.d(TAG, "✅ FirebaseAuth instance created")
-            // ログイン状態を保持するため、自動サインアウトを削除
             Log.d(TAG, "✅ Preserving login state")
         } catch (e: Exception) {
             Log.e(TAG, "❌ Firebase initialization failed: ${e.message}", e)
@@ -132,6 +133,7 @@ class MainActivity : ComponentActivity() {
                 val userViewModel: UserViewModel = koinViewModel()
                 val deviceViewModel: com.example.helpsync.viewmodel.DeviceManagementVewModel = koinViewModel()
                 val helpMarkHolderViewModel: HelpMarkHolderViewModel = koinViewModel()
+
                 val bleAdvertiser: BLEAdvertiser = remember {
                     BLEAdvertiser(this, "0000180A-0000-1000-8000-00805F9B34FB")
                 }
@@ -140,110 +142,53 @@ class MainActivity : ComponentActivity() {
                 var selectedRole by rememberSaveable { mutableStateOf<String?>(null) }
                 var hasNavigatedOnStartup by rememberSaveable { mutableStateOf(false) }
 
-                // アプリ起動時の自動ナビゲーション（既存ログイン時のみ）
+                // アプリ起動時の自動ナビゲーション
                 LaunchedEffect(Unit) {
-                    // ユーザーデータの読み込みを待つ
                     kotlinx.coroutines.delay(100)
-                    
                     if (!hasNavigatedOnStartup && userViewModel.isSignedIn && userViewModel.currentUser != null) {
-                        Log.d(TAG, "🚀 Auto-navigation on startup (existing login)")
-                        Log.d(TAG, "User role: ${userViewModel.currentUser?.role}")
-                        Log.d(TAG, "User nickname: ${userViewModel.currentUser?.nickname}")
-                        
+                        Log.d(TAG, "🚀 Auto-navigation on startup")
                         val targetScreen = when {
-                            userViewModel.currentUser?.role.isNullOrEmpty() -> {
-                                Log.d(TAG, "→ Navigating to RoleSelection (no role)")
-                                AppScreen.RoleSelection.name
-                            }
-                            userViewModel.currentUser?.nickname.isNullOrEmpty() -> {
-                                Log.d(TAG, "→ Navigating to NicknameSetting (no nickname)")
-                                AppScreen.NicknameSetting.name
-                            }
-                            userViewModel.currentUser?.role == "supporter" -> {
-                                Log.d(TAG, "→ Navigating to SupporterHome")
-                                AppScreen.SupporterHome.name
-                            }
-                            userViewModel.currentUser?.role == "requester" -> {
-                                Log.d(TAG, "→ Navigating to HelpMarkHolderScreen")
-                                AppScreen.HelpMarkHolderScreen.name
-                            }
-                            else -> {
-                                Log.d(TAG, "→ Navigating to RoleSelection (default)")
-                                AppScreen.RoleSelection.name
-                            }
+                            userViewModel.currentUser?.role.isNullOrEmpty() -> AppScreen.RoleSelection.name
+                            userViewModel.currentUser?.nickname.isNullOrEmpty() -> AppScreen.NicknameSetting.name
+                            userViewModel.currentUser?.role == "supporter" -> AppScreen.SupporterHome.name
+                            userViewModel.currentUser?.role == "requester" -> AppScreen.HelpMarkHolderScreen.name
+                            else -> AppScreen.RoleSelection.name
                         }
-                        
                         navController.navigate(targetScreen) {
                             popUpTo(AppScreen.SignIn.name) { inclusive = true }
                         }
                         hasNavigatedOnStartup = true
-                    } else {
-                        Log.d(TAG, "No auto-navigation needed (not logged in or first time)")
                     }
                 }
 
-                // ログイン成功時の処理（初回ログインと2回目以降の起動の両方に対応）
+                // ログイン成功時の処理
                 val isSignedIn by remember { derivedStateOf { userViewModel.isSignedIn } }
                 val currentUser by remember { derivedStateOf { userViewModel.currentUser } }
-                
+
                 LaunchedEffect(isSignedIn, currentUser) {
-                    // 初回ログイン時: hasNavigatedOnStartup = false
-                    // 2回目起動時: hasNavigatedOnStartup = false (起動時のLaunchedEffectで設定)
-                    Log.d(TAG, "LaunchedEffect triggered - isSignedIn: $isSignedIn, currentUser: ${currentUser?.email}, role: ${currentUser?.role}, nickname: ${currentUser?.nickname}")
-                    
                     if (isSignedIn && currentUser != null) {
-                        // デバイス登録処理（MainActivity内なので画面遷移してもキャンセルされない）
                         val isRegistered = deviceViewModel.isDeviceRegistered()
                         if (!isRegistered) {
-                            Log.d(TAG, "📱 Registering new device for user: ${currentUser?.email}")
                             deviceViewModel.callRegisterNewDevice(0.0, 0.0)
-                        } else {
-                            Log.d(TAG, "📱 Device already registered")
                         }
-                        
-                        // 既に起動時の自動ナビゲーションが完了している場合はスキップ
-                        if (hasNavigatedOnStartup) {
-                            Log.d(TAG, "⏭️ Skipping navigation (already navigated on startup)")
-                            return@LaunchedEffect
-                        }
-                        
-                        // ログイン成功時、適切な画面に遷移
-                        Log.d(TAG, "🔐 Login success, navigating to appropriate screen")
-                        Log.d(TAG, "User details - role: ${currentUser?.role}, nickname: ${currentUser?.nickname}")
-                        
+
+                        if (hasNavigatedOnStartup) return@LaunchedEffect
+
                         val targetScreen = when {
-                            currentUser?.role.isNullOrEmpty() -> {
-                                Log.d(TAG, "→ Target: RoleSelection (no role)")
-                                AppScreen.RoleSelection.name
-                            }
-                            currentUser?.nickname.isNullOrEmpty() -> {
-                                Log.d(TAG, "→ Target: NicknameSetting (no nickname)")
-                                AppScreen.NicknameSetting.name
-                            }
-                            currentUser?.role == "supporter" -> {
-                                Log.d(TAG, "→ Target: SupporterHome (supporter role)")
-                                AppScreen.SupporterHome.name
-                            }
-                            currentUser?.role == "requester" -> {
-                                Log.d(TAG, "→ Target: HelpMarkHolderScreen (requester role)")
-                                AppScreen.HelpMarkHolderScreen.name
-                            }
-                            else -> {
-                                Log.d(TAG, "→ Target: RoleSelection (default/unknown role: ${currentUser?.role})")
-                                AppScreen.RoleSelection.name
-                            }
+                            currentUser?.role.isNullOrEmpty() -> AppScreen.RoleSelection.name
+                            currentUser?.nickname.isNullOrEmpty() -> AppScreen.NicknameSetting.name
+                            currentUser?.role == "supporter" -> AppScreen.SupporterHome.name
+                            currentUser?.role == "requester" -> AppScreen.HelpMarkHolderScreen.name
+                            else -> AppScreen.RoleSelection.name
                         }
-                        
-                        Log.d(TAG, "Navigating to: $targetScreen")
+
                         navController.navigate(targetScreen) {
                             popUpTo(AppScreen.SignIn.name) { inclusive = true }
                         }
                         hasNavigatedOnStartup = true
-                        Log.d(TAG, "Navigation completed, hasNavigatedOnStartup set to true")
-                    } else {
-                        Log.d(TAG, "Not navigating - isSignedIn: $isSignedIn, currentUser is null: ${currentUser == null}")
                     }
                 }
+
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     NavHost(
                         navController = navController,
@@ -252,33 +197,19 @@ class MainActivity : ComponentActivity() {
                     ) {
                         // --- 認証フロー ---
                         composable(AppScreen.SignIn.name) {
-                            // サインイン画面に戻った時、ナビゲーションフラグをリセット
-                            LaunchedEffect(Unit) {
-                                Log.d(TAG, "SignIn screen displayed, resetting hasNavigatedOnStartup")
-                                hasNavigatedOnStartup = false
-                            }
-                            
+                            LaunchedEffect(Unit) { hasNavigatedOnStartup = false }
                             SignInScreen(
                                 onNavigateToSignUp = { navController.navigate(AppScreen.SignUp.name) },
-                                onSignInSuccess = {
-                                    // LaunchedEffectで自動遷移するため、ここでは何もしない
-                                },
+                                onSignInSuccess = { },
                                 userViewModel = userViewModel
                             )
                         }
 
                         composable(AppScreen.SignUp.name) {
-                            // サインアップ画面でもナビゲーションフラグをリセット
-                            LaunchedEffect(Unit) {
-                                Log.d(TAG, "SignUp screen displayed, resetting hasNavigatedOnStartup")
-                                hasNavigatedOnStartup = false
-                            }
-                            
+                            LaunchedEffect(Unit) { hasNavigatedOnStartup = false }
                             SignUpScreen(
                                 onNavigateToSignIn = { navController.navigate(AppScreen.SignIn.name) },
-                                onSignUpSuccess = {
-                                    // LaunchedEffectで自動遷移するため、ここでは何もしない
-                                },
+                                onSignUpSuccess = { },
                                 userViewModel = userViewModel
                             )
                         }
@@ -297,13 +228,13 @@ class MainActivity : ComponentActivity() {
                                     RoleType.SUPPORTER -> AppScreen.NicknameSetting.name
                                     RoleType.HELP_MARK_HOLDER -> AppScreen.HelpMarkHolderProfile.name
                                 }
-
                                 navController.navigate(nextScreen)
                             }
                         }
 
                         // --- ヘルプマーク所持者フロー ---
                         composable(AppScreen.HelpMarkHolderScreen.name) {
+                            // ★修正: 引数をHelpMarkHolderScreen.ktの定義に合わせました
                             HelpMarkHolderScreen(
                                 mainNavController = navController,
                                 userViewModel = userViewModel,
@@ -311,13 +242,13 @@ class MainActivity : ComponentActivity() {
                                 onSignOut = {
                                     hasNavigatedOnStartup = false
                                 },
-                                onMatchingEstablished = {requestId ->
-                                    // 受け取ったIDを使って完了画面へ遷移
+                                onMatchingEstablished = { requestId ->
                                     navController.navigate("${AppScreen.HelpMarkHolderMatchingComplete.name}/$requestId")
                                 }
                             )
                         }
 
+                        // マッチング待機画面
                         composable(
                             route = "${AppScreen.HelpMarkHolderMatching.name}/{requestId}",
                             arguments = listOf(navArgument("requestId") { type = NavType.StringType })
@@ -340,6 +271,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        // マッチング完了画面
                         composable(
                             route = "${AppScreen.HelpMarkHolderMatchingComplete.name}/{requestId}",
                             arguments = listOf(navArgument("requestId") { type = NavType.StringType })
@@ -357,8 +289,8 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // --- サポーターフロー ---
                         composable(AppScreen.SupporterHome.name) {
+                            // SupporterHomeScreen ではなく、Scaffoldを持つ SupporterScreen を呼び出します
                             SupporterScreen(
                                 navController = navController,
                                 nickname = userViewModel.currentUser?.nickname ?: "",
@@ -366,15 +298,11 @@ class MainActivity : ComponentActivity() {
                                     userViewModel.updateNickname(newNickname)
                                 },
                                 photoUri = photoUri,
-                                onPhotoChange = { newUri ->
-                                    photoUri = newUri
-                                },
+                                onPhotoChange = { newUri -> photoUri = newUri },
                                 onPhotoSave = { uriToSave ->
                                     userViewModel.uploadProfileImage(uriToSave) { downloadUrl ->
                                         if (downloadUrl.isNotEmpty()) {
                                             userViewModel.updateUserIconUrl(downloadUrl)
-                                        } else {
-                                            Log.e(TAG, "❌ 画像のアップロードに失敗")
                                         }
                                     }
                                 },
@@ -387,8 +315,6 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
-
-
 
                         // --- 共通画面 ---
                         composable(AppScreen.Settings.name) {
@@ -455,14 +381,63 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        composable(AppScreen.HelpMarkHolderHome.name) {
+                            HelpMarkHolderHomeScreen(
+                                userViewModel = userViewModel,
+                                onMatchingStarted = {
+                                    val currentId = userViewModel.activeHelpRequest.value?.id ?: "temp"
+                                    navController.navigate("${AppScreen.HelpMarkHolderMatching.name}/$currentId")
+                                },
+                                helpMarkHolderViewModel = helpMarkHolderViewModel,
+                                locationClient = fusedLocationClient,
+                                onMatchingEstablished = { requestId ->
+                                    navController.navigate("${AppScreen.HelpMarkHolderMatchingComplete.name}/$requestId")
+                                }
+                            )
+                        }
+
+                        composable(AppScreen.HelpMarkHolderProfile.name) {
+                            HelpMarkHolderProfileScreen(
+                                onBackClick = { navController.popBackStack() },
+                                onCompleteClick = {
+                                    navController.navigate(AppScreen.HelpMarkHolderScreen.name) {
+                                        popUpTo(AppScreen.RoleSelection.name) { inclusive = false }
+                                    }
+                                },
+                                onSignOut = {
+                                    hasNavigatedOnStartup = false
+                                    navController.navigate(AppScreen.SignIn.name) {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
+                        // 通知からのディープリンク対応 (RequestAcceptanceScreen)
+                        composable(
+                            route = "HelpRequestDetailScreen/{supporterInformation}",
+                            arguments = listOf(navArgument("supporterInformation") { type = NavType.StringType }),
+                            deepLinks = listOf(navDeepLink {
+                                uriPattern = "app://helpsync/HelpRequestDetailScreen/{supporterInformation}"
+                                action = "ACTION_SHOW_ACCEPTANCE_SCREEN"
+                            })
+                        ) {
+                            // ★修正: 引数をRequestAcceptanceScreen.ktの定義に合わせました
+                            // supporterInformationはViewModel経由か、通知の仕組みで処理する前提で、画面には渡しません。
+                            RequestAcceptanceScreen(
+                                onDoneClick = {
+                                    // 完了したらサポーターホームに戻る
+                                    navController.navigate(AppScreen.SupporterHome.name) {
+                                        popUpTo(AppScreen.SupporterHome.name) { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
+
                         composable(AppScreen.HelpMarkHolderProfileFromSettings.name) {
                             HelpMarkHolderProfileScreen(
-                                onBackClick = {
-                                    navController.popBackStack()
-                                },
-                                onCompleteClick = {
-                                    navController.popBackStack()
-                                },
+                                onBackClick = { navController.popBackStack() },
+                                onCompleteClick = { navController.popBackStack() },
                                 onSignOut = {
                                     hasNavigatedOnStartup = false
                                     navController.navigate(AppScreen.SignIn.name) {

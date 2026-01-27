@@ -5,12 +5,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.example.helpsync.data.HelpRequesterInfo
 
+data class HelpRequesterInfo(
+    val requestId: String,
+    val nickname: String,
+    val iconUrl: String?,
+    val detail: String?
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HelpRequestDetailScreen(
     info: HelpRequesterInfo?,
@@ -52,7 +58,7 @@ fun HelpRequestDetailScreen(
             Text("ニックネーム: ${info.nickname}", style = MaterialTheme.typography.titleMedium)
             Text("要請ID: ${info.requestId}", style = MaterialTheme.typography.bodyMedium)
             info.detail?.let { Text("要請内容: $it", style = MaterialTheme.typography.bodyMedium) }
-            
+
 
             Spacer(modifier = Modifier.height(12.dp))
             Button(onClick = onBack) { Text("閉じる") }
