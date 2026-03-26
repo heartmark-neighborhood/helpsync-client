@@ -504,4 +504,33 @@ class UserRepository {
             Result.failure(e)
         }
     }
+
+    suspend fun getMatchedCandidate(helpRequestId: String): Result<User> {
+        return try {
+            val candidatesRef = helpRequestsCollection
+                .document(helpRequestId)
+                .collection("candidates")
+
+            val querySnapshot = candidatesRef.get().await()
+
+            if (!querySnapshot.isEmpty) {
+                val document = querySnapshot.documents[0]
+
+                val nickname = document.getString("nickname") ?: ""
+                val iconUrl = document.getString("iconUrl") ?: ""
+                val physicalDescription = document.getString("physicalDescription") ?: ""
+
+                val supporterUser = User(
+                    nickname = nickname,
+                    iconUrl = iconUrl,
+                    physicalFeatures = physicalDescription
+                )
+                Result.success(supporterUser)
+            } else {
+                Result.failure(Exception("サポーターが見つかりません"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

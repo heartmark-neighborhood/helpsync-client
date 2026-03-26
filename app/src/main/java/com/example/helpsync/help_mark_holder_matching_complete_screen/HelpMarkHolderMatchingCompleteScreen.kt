@@ -1,6 +1,5 @@
 package com.example.helpsync.help_mark_holder_matching_complete_screen
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -13,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -31,22 +29,14 @@ fun HelpMarkHolderMatchingCompleteScreen(
     helpMarkHolderViewModel: HelpMarkHolderViewModel,
     onHomeClick: () -> Unit = {}
 ) {
-
     val supporterProfile by userViewModel.supporterProfile.collectAsState()
-    val scaleAnimation = remember { Animatable(0f) }
+    val matchedRequestDetails by userViewModel.matchedRequestDetails.collectAsState()
+    val errorMessage = userViewModel.errorMessage
 
     LaunchedEffect(requestId) {
-        if (requestId.isNotEmpty()) {
+        if (requestId.isNotBlank()) {
             userViewModel.loadMatchedRequestDetails(requestId)
         }
-
-        scaleAnimation.animateTo(
-            targetValue = 1f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow
-            )
-        )
     }
 
     DisposableEffect(Unit) {
@@ -58,135 +48,142 @@ fun HelpMarkHolderMatchingCompleteScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFE8F5E8))
+            .background(Color.White)
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (supporterProfile == null) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator()
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("サポーター情報を取得中...")
-            }
-        } else {
-            val profile = supporterProfile ?: return@Column
+        Spacer(modifier = Modifier.height(40.dp))
 
-            Spacer(modifier = Modifier.weight(1f))
+        Icon(
+            imageVector = Icons.Default.CheckCircle,
+            contentDescription = "マッチング完了",
+            modifier = Modifier.size(100.dp),
+            tint = Color(0xFF4CAF50)
+        )
 
-            Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .scale(scaleAnimation.value),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = "マッチング完了",
-                    modifier = Modifier.size(60.dp),
-                    tint = Color(0xFF4CAF50)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "マッチングが成立しました！",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF4CAF50)
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "支援してくれるサポーターが見つかりました",
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            color = Color.Gray
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        when {
+            errorMessage != null -> {
+                Text(
+                    text = "サポーター情報の取得に失敗しました",
+                    color = Color.Red,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                "マッチング完了！",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF4CAF50)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                "支援者が見つかりました",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color(0xFF757575),
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-            ) {
+            matchedRequestDetails == null || supporterProfile == null -> {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFE0E0E0)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (!profile.iconUrl.isNullOrEmpty()) {
-                            AsyncImage(
-                                model = profile.iconUrl,
-                                contentDescription = "支援者プロフィール写真",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.Person,
-                                contentDescription = "支援者",
-                                modifier = Modifier.size(40.dp),
-                                tint = Color.Gray
-                            )
-                        }
-                    }
-
+                    CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = profile.nickname.ifEmpty { "名称未設定" },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.DarkGray
-                    )
-
-                    if (!profile.physicalFeatures.isNullOrEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = profile.physicalFeatures,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray
-                        )
-                    }
+                    Text("サポーター情報を取得中...")
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            else -> {
+                val profile = supporterProfile!!
 
-            OutlinedButton(
-                onClick = {
-                    helpMarkHolderViewModel.callCompleteHelp(5, "thank you!")
-                    onHomeClick()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Text(
-                    "ホームに戻る",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F8F8)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(140.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.LightGray),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (profile.iconUrl.isNotBlank()) {
+                                    AsyncImage(
+                                        model = profile.iconUrl,
+                                        contentDescription = "サポータープロフィール画像",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = "プロフィール画像なし",
+                                        modifier = Modifier.size(72.dp),
+                                        tint = Color.Gray
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            Text(
+                                text = if (profile.nickname.isNotBlank()) profile.nickname else "ニックネーム未設定",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = if (profile.physicalFeatures.isNotBlank()) {
+                                    profile.physicalFeatures
+                                } else {
+                                    "身体的特徴の登録はありません"
+                                },
+                                fontSize = 16.sp,
+                                textAlign = TextAlign.Center,
+                                color = Color.DarkGray
+                            )
+                        }
+                    }
+                }
             }
+        }
+
+        OutlinedButton(
+            onClick = {
+                helpMarkHolderViewModel.callCompleteHelp(5, "thank you!")
+                onHomeClick()
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+        ) {
+            Text("ホームに戻る", fontSize = 16.sp)
         }
     }
 }

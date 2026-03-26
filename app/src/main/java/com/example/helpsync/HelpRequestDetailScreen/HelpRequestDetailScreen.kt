@@ -1,4 +1,4 @@
-package com.example.helpsync.help_request_detail_screen
+package com.example.helpsync.HelpRequestDetailScreen
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons

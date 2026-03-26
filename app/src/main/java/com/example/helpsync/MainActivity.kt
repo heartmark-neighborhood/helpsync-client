@@ -312,7 +312,7 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate(AppScreen.SignIn.name) {
                                         popUpTo(0) { inclusive = true }
                                     }
-                                }
+                                   }
                             )
                         }
 

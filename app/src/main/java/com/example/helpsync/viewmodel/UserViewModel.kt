@@ -452,26 +452,55 @@ class UserViewModel : ViewModel() {
 
     fun loadMatchedRequestDetails(requestId: String) {
         if (requestId.isBlank()) return
+
         viewModelScope.launch {
             isLoading = true
+            errorMessage = null
+
             userRepository.getRequest(requestId)
                 .onSuccess { request ->
                     _matchedRequestDetails.value = request
+
+                    userRepository.getMatchedCandidate(requestId)
+                        .onSuccess { user ->
+                            _supporterProfile.value = user
+                        }
+                        .onFailure { error ->
+                            errorMessage = "サポーター情報の取得に失敗しました: ${error.message}"
+                            _supporterProfile.value = null
+                        }
+
+                    if (!request.matchedSupporterId.isNullOrBlank()) {
+                        userRepository.getUser(request.matchedSupporterId!!)
+                            .onSuccess { user ->
+                                _supporterProfile.value = user
+                            }
+                            .onFailure { error ->
+                                errorMessage = "サポーター情報の取得に失敗しました: ${error.message}"
+                                _supporterProfile.value = null
+                            }
+                    } else {
+                        errorMessage = "マッチしたサポーター情報が見つかりませんでした"
+                        _supporterProfile.value = null
+                    }
+
                     if (request.requesterId.isNotBlank()) {
                         userRepository.getUser(request.requesterId)
-                            .onSuccess { user -> _requesterProfile.value = user }
-                            .onFailure { clearMatchedDetails() }
-                    }
-                    if (!request.matchedSupporterId.isNullOrBlank()) {
-                        userRepository.getUser(request.matchedSupporterId)
-                            .onSuccess { user -> _supporterProfile.value = user }
-                            .onFailure { clearMatchedDetails() }
+                            .onSuccess { user ->
+                                _requesterProfile.value = user
+                            }
+                            .onFailure {
+                                _requesterProfile.value = null
+                            }
                     }
                 }
-                .onFailure {
-                    errorMessage = "リクエスト詳細の取得に失敗しました。"
-                    clearMatchedDetails()
+                .onFailure { error ->
+                    errorMessage = "リクエスト詳細の取得に失敗しました: ${error.message}"
+                    _matchedRequestDetails.value = null
+                    _supporterProfile.value = null
+                    _requesterProfile.value = null
                 }
+
             isLoading = false
         }
     }

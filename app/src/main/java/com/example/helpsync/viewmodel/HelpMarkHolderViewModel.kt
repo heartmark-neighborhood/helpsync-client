@@ -149,7 +149,7 @@ class HelpMarkHolderViewModel(
                 Log.d("Error", "Error Message:${e.message}")
             }
             try {
-                val functions = Firebase.functions("asis-northeast2")
+                val functions = Firebase.functions("asia-northeast2")
                 val evaluationMap = hashMapOf(
                     "rating" to rating,
                     "comment" to comment

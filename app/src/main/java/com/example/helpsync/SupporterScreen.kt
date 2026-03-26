@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,7 +28,7 @@ enum class MainScreenTab(
     val route: String
 ) {
     Home(Icons.Outlined.Home, "ホーム", "main/home"),
-    profile(Icons.Outlined.Settings, "プロフィール", "main/profile")
+    Profile(Icons.Outlined.Person, "プロフィール", "main/profile")
 }
 
 @Composable
@@ -85,7 +86,7 @@ fun SupporterScreen(
                 )
             }
 
-            composable(MainScreenTab.profile.route) {
+            composable(MainScreenTab.Profile.route) {
                 SupporterSettingScreen(
                     nickname = nickname,
                     onNicknameChange = {},
